@@ -161,7 +161,7 @@ const STATUS={assign:['to do','in progress','submitted'],lect:['not started','to
 function listStats(mod,l){const a=S.mods[mod][l];const n=a.length;let d=0;
   if(l==='assign')d=a.filter(x=>x.st===2).length;else if(l==='lect')d=a.filter(x=>x.st===2).length;else if(l==='tuto'&&mod==='diss')d=a.filter(x=>x.st===3).length;else d=a.filter(x=>x.d).length;return{n,d,p:n?d/n:0}}
 function modProgress(mod){const ls=['todo','assign','tuto','lect'].map(l=>listStats(mod,l)).filter(s=>s.n);return ls.length?ls.reduce((a,s)=>a+s.p,0)/ls.length:0}
-function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tests){tw+=num(t.weight);got+=num(t.score)*num(t.weight)/100}
+function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tests){tw+=num(t.weight);const out=num(t.out)>0?num(t.out):100;got+=Math.min(num(t.score),out)/out*num(t.weight)}
   const ew=num(M.examW);const need=T=>ew?(T-got)/(ew/100):Infinity;
   return{got,tw,ew,ok:Math.abs(tw+ew-100)<.01,grades:[['A','70–100',70],['B','60–69',60],['C','50–59',50],['D','40–49',40],['F','< 40',0]].map(([g,r,T])=>({g,r,T,need:g==='F'?null:Math.max(0,Math.ceil(need(T)-1e-9))}))}}
 

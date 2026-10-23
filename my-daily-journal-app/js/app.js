@@ -118,12 +118,17 @@ const ACT={
   notifOn:async()=>{if('Notification'in window&&Notification.permission==='denied'){return sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Allow</em> reminders</div></div><p class="hint" style="font-size:1.05rem">Notifications are blocked for this app.<br><br><b>iPhone / iPad:</b> Settings → Notifications → My Journal → Allow Notifications.<br><b>Android:</b> long-press the app icon → App info → Notifications.<br><b>Computer:</b> click the lock icon next to the address → Notifications → Allow.</p><button class="btn d full" data-act="closeSheet">OK</button></div>`)}
     const r=await enableNotifications();rerender();toast(r.msg);if(r.ok)setTimeout(()=>notify('Reminders are on ♡','You will get your morning to-do and your deadlines.'),400)},
   notifOff:async()=>{await disableNotifications();rerender();toast('Reminders turned off on this device')},
-  syncOn:()=>syncSheet(),
+  syncOn:()=>showLogin(true),
+  loginGo:async(el)=>{const u=$('#lg-u').value,p=$('#lg-p').value,er=$('#login .err');er.textContent='';el.disabled=true;el.textContent='Signing in…';
+    try{const had=await syncLogin(u,p);try{localStorage.removeItem('mdj-skiplogin')}catch(e){}$('#login').classList.add('hide');rerender();toast(had?'Welcome back ♡ your journal is here':'Account created ✓ — sign in with it on your other devices')}
+    catch(e){er.textContent=e.message||String(e);el.disabled=false;el.textContent='Sign in'}},
+  loginSkip:()=>{try{localStorage.setItem('mdj-skiplogin','1')}catch(e){}$('#login').classList.add('hide')},
+  signOut:()=>{if(!confirm('Sign out on this device? Your journal stays saved in your account.'))return;syncDisable();rerender();toast('Signed out on this device')},
   syncGo:async(el,d)=>{const c=$('#sy-code')?.value||window._syCode||'';if(c.trim().length<6)return toast('Use at least 6 characters');window._syCode=c;el.disabled=true;el.textContent='Checking…';
     try{const p=await syncProbe(c);if(p.exists&&!d.choice){return syncSheet(c,p)}const had=await syncEnable(c,d.choice||'');closeSheet();window._syCode=null;rerender();toast(had&&d.choice!=='upload'?'Synced ✓ — your journal is on this device':'Sync is on ✓')}
-    catch(e){el.disabled=false;el.textContent='Try again';toast(e.message||'Could not turn on sync')}},
+    catch(e){el.disabled=false;el.textContent='Try again';const m=e.message||String(e)||'Could not turn on sync';toast(m);const box=el.closest('#sheet')?.querySelector('.syerr')||(()=>{const b=document.createElement('p');b.className='hint syerr';b.style.cssText='color:var(--rd);margin:10px 0 0;font-size:.95rem';el.parentElement.after(b);return b})();box.textContent='⚠ '+m}},
   syncNow:async()=>{await syncPull();await syncPush(true);rerender();toast(SYNC.status==='ok'?'Synced ✓':'Offline — will sync later')},
-  syncOff:()=>{if(!confirm('Turn off sync on this device? Your data stays here and in the cloud.'))return;syncDisable();rerender();toast('Sync turned off on this device')},
+  syncOffOld:()=>{if(!confirm('Turn off sync on this device? Your data stays here and in the cloud.'))return;syncDisable();rerender();toast('Sync turned off on this device')},
   notifTest:()=>{if(!remindersOn())return toast('Turn notifications on first');notify(`${S.prof.t1} ${S.prof.t2} ${S.prof.t3}`,'This is how your reminders will look ♡')},
   backup:()=>{const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='my-daily-journal-'+TK()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);toast('Backup downloaded')},
   snaps:async()=>{const ks=(await idbKeys('snaps')).sort().reverse();sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Automatic</em> copies</div></div><div class="hint" style="margin:6px 0 10px">One copy is kept per day, for 7 days.</div>${ks.map(k=>`<div class="li"><span class="tx">${fmtDay(parseKey(k))}</span><button class="btn sm" data-act="snapRestore" data-k="${k}">Restore</button></div>`).join('')||'<div class="hint">No copy yet.</div>'}<button class="btn full" style="margin-top:12px" data-act="closeSheet">Close</button></div>`)},
@@ -150,7 +155,7 @@ document.addEventListener('input',e=>{const el=e.target,f=el.dataset.in;if(!f)re
     case'gBudget':S.groc.budget=Math.max(0,num(v));break;
     case'gPrice':{const x=S.groc.items.find(i=>i.id===d.id);if(x)x.price=Math.max(0,num(v));break}
     case'modT':S.mods[d.mod][d.l][+d.j].t=v;break;
-    case'testN':S.mods[d.mod].tests[+d.j].name=v;break;case'testS':S.mods[d.mod].tests[+d.j].score=v===''?'':clamp(num(v),0,100);break;case'testW':S.mods[d.mod].tests[+d.j].weight=num(v);break;case'examW':S.mods[d.mod].examW=num(v);break;
+    case'testN':S.mods[d.mod].tests[+d.j].name=v;break;case'testS':{const t=S.mods[d.mod].tests[+d.j];t.score=v===''?'':clamp(num(v),0,num(t.out)>0?num(t.out):100);break}case'testO':{const t=S.mods[d.mod].tests[+d.j];t.out=num(v)>0?num(v):'';break}case'testW':S.mods[d.mod].tests[+d.j].weight=num(v);break;case'examW':S.mods[d.mod].examW=num(v);break;
     case'dumpT':S.dump[+d.j].t=v;break;
     case'remTime':S.rem[d.k]=v;break;
     case'prof':S.prof[d.k]=v;break;
@@ -166,7 +171,7 @@ document.addEventListener('change',e=>{const el=e.target,f=el.dataset.in;
   if(f==='wkSel'){S.ui.week=+el.value;save();render();return}
   if(f==='sem'){if(S.sem.start&&!isNaN(parseKey(S.sem.start))){buildBlocks();S.ui.week=null;save();rerender()}return}
   if(['prof','modName','modShort','waterGoal'].includes(f)){applyModCfg();rerender();const ib=$('#intro .bk');return}
-  if(['calGoal','kq','gBudget','gPrice','testS','testW','examW','fk'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
+  if(['calGoal','kq','gBudget','gPrice','testS','testO','testW','examW','fk'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
 document.addEventListener('keydown',e=>{const el=e.target;
   if(e.key==='Enter'&&el.dataset.add){const v=el.value.trim();if(!v)return;dayData(el.dataset.add).tasks.push({id:uid(),t:v,d:false});save();rerender();const n=$(`[data-add="${el.dataset.add}"]`);n&&n.focus()}
   if(e.key==='Enter'&&el.isContentEditable){e.preventDefault();el.blur()}
@@ -174,6 +179,7 @@ document.addEventListener('keydown',e=>{const el=e.target;
   if(e.key==='Enter'&&(el.id==='gi-n'||el.id==='gi-p'||el.id==='gi-q'))grocAdd();
   if(e.key==='Enter'&&el.id==='mi-t')$('[data-act=modAdd]')?.click();
   if(e.key==='Enter'&&el.id==='nt-t')ACT.taskSave();
+  if(e.key==='Enter'&&(el.id==='lg-p'||el.id==='lg-u')){e.preventDefault();$('[data-act=loginGo]')?.click();return}
   if(e.key==='Enter'&&el.id==='sy-code')$('[data-act=syncGo]')?.click();});
 
 /* ---------- groceries helpers ---------- */
@@ -280,6 +286,13 @@ function printMonth(){const t=today();const[y,m]=S.ui.cal||[t.getFullYear(),t.ge
   $('#print').innerHTML=`<div class="pp"><h1>${MONTHS[m]} ${y}</h1><div class="sub2">${esc(S.prof.t1+' '+S.prof.t2+' '+S.prof.t3)} · ${esc(S.prof.label)}</div><div class="pmonth">${DAYS3.map(x=>`<div class="ph2">${x.toUpperCase()}</div>`).join('')}${cells}</div></div>`;window.print()}
 
 /* ---------- sync sheet ---------- */
+function showLogin(force){if(!API)return force?toast('Sign-in works on the published site.'):0;if(SYNC.conf)return;if(!force){let sk=null;try{sk=localStorage.getItem('mdj-skiplogin')}catch(e){}if(sk)return}
+  const L=$('#login');L.innerHTML=`<form class="lg" onsubmit="return false"><img src="icon-192.png" alt=""><h2><em>Welcome</em> back</h2><p>Sign in to see your journal on this device</p>
+  <div class="field"><label for="lg-u">Username</label><input id="lg-u" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+  <div class="field"><label for="lg-p">Password</label><input id="lg-p" type="password" autocomplete="current-password"></div>
+  <div class="err"></div><button class="btn d full" type="submit" data-act="loginGo">Sign in</button>
+  <button type="button" class="skip" data-act="loginSkip">${force?'Cancel':'Use without signing in'}</button></form>`;
+  L.classList.remove('hide');setTimeout(()=>$('#lg-u')?.focus(),400)}
 function syncSheet(code,probe){if(!API)return toast('Sync works once the app is published online.');
   if(probe){const when=probe.at?fmtDay(new Date(probe.at)):'';return sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Journal</em> found</div></div><p class="hint" style="font-size:1.05rem">A journal with this code is already in the cloud${when?' (last saved '+when+')':''}.</p><div class="btns" style="margin:12px 0 0;flex-direction:column"><button class="btn d" data-act="syncGo" data-choice="use">Use it on this device</button><button class="btn" data-act="syncGo" data-choice="upload">Replace it with this device's data</button><button class="btn" data-act="closeSheet">Cancel</button></div></div>`)}
   sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Turn on</em> sync</div></div>
@@ -299,7 +312,7 @@ async function boot(){load();await recoverIfEmpty();applyTheme();
   saveListeners.push(onLocalSave);
   navigator.serviceWorker?.addEventListener?.('message',ev=>{if(ev.data==='resubscribe'&&Notification.permission==='granted')enableNotifications()});
   render();save();
-  syncInit();pushInit();pushServer();
+  syncInit();pushInit();pushServer();if(!SYNC.conf)showLogin(false);
   const intro=$('#intro');const ic=$('#intro .cover>div');if(ic)ic.innerHTML=`<div style="font:500 .5rem Jost;letter-spacing:.2em;text-transform:uppercase">${esc(S.prof.label)}</div><div style="font:500 1.6rem/1 'Bodoni Moda';margin-top:6px">${esc(S.prof.t1)} <span style="font:400 2.1rem 'Pinyon Script';color:#A44C61">${esc(S.prof.t2)}</span><br>${esc(S.prof.t3)}</div>`;if(S.set.intro&&!sessionStorage.getItem('mdj-intro')){sessionStorage.setItem('mdj-intro','1');intro.classList.remove('hide');setTimeout(()=>{intro.classList.add('out');setTimeout(()=>intro.classList.add('hide'),450)},1500)}else intro.classList.add('hide');
   if(S.lock.pin)showLock('unlock');
   checkStickers();checkReminders();setInterval(checkReminders,60000);focusTick();
