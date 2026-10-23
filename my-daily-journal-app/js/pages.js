@@ -2,12 +2,14 @@
 'use strict';
 const I=(id,c='ic')=>`<svg class="${c}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const BOW=`<svg viewBox="0 0 120 92" style="width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round"><path d="M60 34 C48 16 20 8 15 23 C10 39 40 43 59 37"/><path d="M60 34 C72 16 100 8 105 23 C110 39 80 43 61 37"/><ellipse cx="60" cy="35.5" rx="5.5" ry="5"/><path d="M56 40 C50 54 41 64 36 82 C42 77 47 79 50 86 C54 70 57 56 59 41"/><path d="M64 40 C70 56 81 66 86 84 C80 79 75 81 72 88 C68 72 63 57 61 41"/></svg>`;
-const brand=(act='')=>`<header class="brand"><img src="icon-192.png" alt=""><span class="nm">MY <em>Daily</em> JOURNAL</span><div class="act">${act}</div></header>`;
+const P=()=>S.prof;
+const logoTxt=()=>`${esc(P().t1)} <em>${esc(P().t2)}</em> ${esc(P().t3)}`;
+const brand=(act='')=>`<header class="brand"><img src="icon-192.png" alt=""><span class="nm">${logoTxt()}</span><div class="act">${act}</div></header>`;
 const title=(a,b,k='')=>`<div class="ttl"><div class="t"><em>${a}</em> ${b}</div><span class="k">${k}</span></div>`;
 const box=(on,act,attrs='')=>`<button class="box ${on?'on':''}" data-act="${act}" ${attrs} aria-label="Tick"></button>`;
 const NAV=[['home','home','Home'],['week','week','Week'],['cal','cal','Calendar'],['sem','sem','Semester'],['kcal','kcal','Calories'],['groc','bask','Groceries'],['binder','binder','Binder']];
 function barHtml(route){const sec={home:'home',week:'week',today:'cal',cal:'cal',sem:'sem',wrapped:'sem',kcal:'kcal',groc:'groc',binder:'binder',mod:'binder',dump:'binder',focus:'home',stickers:'home',settings:'home',trash:'home'}[route]||'home';
-  return `<nav class="bar">${NAV.map(([r,i,l])=>`<a href="#${r}" class="${sec===r?'on':''}">${I(i)}<span>${l}</span></a>`).join('')}</nav>`}
+  return `<nav class="bar"><div class="sidebrand"><img src="icon-192.png" alt=""><span>${esc(P().t1)} <em>${esc(P().t2)}</em><br>${esc(P().t3)}</span></div>${NAV.map(([r,i,l])=>`<a href="#${r}" class="${sec===r?'on':''}">${I(i)}<span>${l}</span></a>`).join('')}<div class="sidemore"><a href="#focus">◷ <span>Focus</span></a><a href="#stickers">★ <span>Stickers</span></a><a href="#settings">⚙ <span>Settings</span></a></div></nav>`}
 
 /* ================= HOME ================= */
 function pHome(){
@@ -16,11 +18,11 @@ function pHome(){
   const st=streak();const G=S.groc;const planned=G.items.reduce((a,x)=>a+x.qty*x.price,0);
   const next=upcoming(14).find(x=>x.mod&&!x.d);
   return `<div class="page nobar">
-  <div class="hero"><div class="spine"><span>my daily journal</span></div><div class="cv"><div class="big">26<br>27</div>
-   <span class="k" style="position:relative;color:inherit">Year 3 · Semester 2</span>
-   <h1>MY <em>Daily</em><br>JOURNAL</h1><span class="tag2">más amor, por favor</span>
+  <div class="hero"><div class="spine"><span>${esc(P().spine)}</span></div><div class="cv"><div class="big">${esc(P().big1)}<br>${esc(P().big2)}</div>
+   <span class="k" style="position:relative;color:inherit">${esc(P().label)}</span>
+   <h1>${esc(P().t1)} <em>${esc(P().t2)}</em><br>${esc(P().t3)}</h1><span class="tag2">${esc(P().tagline)}</span>
    <span class="chipd">${fmtDay(t)} · ${b?blockName(b)+(b.brk?'':' · '+(isOnline(b)?'online':'face to face')):'off semester'}</span></div></div>
-  <div class="hello"><em>Hello Mihaingo</em><span class="k">where to today?</span>
+  <div class="hello"><em>${esc(P().hello)} ${esc(P().name)}</em><span class="k">where to today?</span>
    <a href="#stickers" class="streak" style="text-decoration:none"><span style="width:18px;height:14px;display:inline-block">${BOW}</span>${st}-day streak</a></div>
   <div class="tiles">
    <a class="tile" href="#week" style="--c:var(--pink)">${I('week')}<div class="tn">Week</div><div class="ts">${b?blockName(b):'Planner'}${b&&!b.brk?' · '+(isOnline(b)?'online':'F2F'):''}</div><span class="arr">›</span></a>
@@ -46,11 +48,11 @@ function pWeek(){
    <select data-in="wkSel" aria-label="Choose week">${opts}</select></div>
    <button class="round" data-act="wkNext" ${S.ui.week===BLOCKS.length-1?'disabled':''}>›</button></div>`;
   if(B.brk)h+=`<div class="card" style="text-align:center;background:var(--blush)"><span class="hint" style="font-size:1.1rem">Midterm break — breathe, catch up, recharge ♡</span></div>`;
-  h+=`<div class="card tp" style="--c:var(--pink)"><h3><em>Tasks</em> of the week <small>3 essentials</small></h3>
+  h+=`<div class="card tp c-goals" style="--c:var(--pink)"><h3><em>Tasks</em> of the week <small>3 essentials</small></h3>
    ${W.goals.map((g,i)=>`<div class="li ${g.d?'done':''}">${box(g.d,'goalTog',`data-i="${i}"`)}<input class="tx inline-in" style="border:0" data-in="goal" data-i="${i}" value="${esc(g.t)}" placeholder="task ${i+1}…"><button class="x" data-act="goalDel" data-i="${i}">✕</button></div>`).join('')}
    <button class="btn sm" data-act="goalAdd" style="margin-top:8px">+ a task</button></div>
-  <div class="card tp" style="--c:var(--sage)"><h3><em>Don't</em> forget <small>deadlines, appointments</small></h3><textarea class="lined" data-in="prio" placeholder="due dates, classes, appointments…">${esc(W.prio)}</textarea></div>
-  <div class="card tp" style="--c:var(--lilac)"><h3><em>Habits</em> <small>little by little</small></h3>
+  <div class="card tp c-prio" style="--c:var(--sage)"><h3><em>Don't</em> forget <small>deadlines, appointments</small></h3><textarea class="lined" data-in="prio" placeholder="due dates, classes, appointments…">${esc(W.prio)}</textarea></div>
+  <div class="card tp c-hab" style="--c:var(--lilac)"><h3><em>Habits</em> <small>little by little</small></h3>
    <div class="habits"><span></span>${'MTWTFSS'.split('').map(x=>`<span class="hh">${x}</span>`).join('')}<span></span>
    ${W.habits.map((n,i)=>`<input class="inline-in" style="border-bottom:1px solid var(--soft)" data-in="habit" data-i="${i}" value="${esc(n)}">${[0,1,2,3,4,5,6].map(d=>`<button class="hdot ${W.hab[i+'-'+d]?'on':''}" data-act="hab" data-i="${i}" data-d="${d}"></button>`).join('')}<button class="x" data-act="habDel" data-i="${i}">✕</button>`).join('')}</div>
    <button class="btn sm" data-act="habAdd" style="margin-top:10px">+ a habit</button></div>`;
@@ -60,7 +62,7 @@ function pWeek(){
       :`<div class="li ${t.d?'done':''}" data-task="${t.id}"><span class="grip" data-grip="${t.id}" data-k="${k}">⋮⋮</span>${box(t.d,'taskTog',`data-k="${k}" data-id="${t.id}"`)}<span class="tx" contenteditable="true" spellcheck="false" data-in="taskT" data-k="${k}" data-id="${t.id}">${esc(t.t)}</span>${t.time?`<span class="meta">${t.time}</span>`:''}<button class="x" data-act="taskDel" data-k="${k}" data-id="${t.id}">✕</button></div>`).join('')}
     <div class="add"><input class="inline-in" data-add="${k}" placeholder="+ add a task…"><button class="btn sm" data-act="taskMore" data-k="${k}">⏱ ↻</button></div>
     <textarea class="lined" style="min-height:56px;margin-top:6px" data-in="note" data-k="${k}" placeholder="little note…">${esc(S.days[k]?.note||'')}</textarea></section>`}
-  h+=`<div class="card tp" style="--c:var(--blush)"><h3><em>Notes</em> of the week</h3><textarea class="lined" style="min-height:140px" data-in="wnotes" placeholder="ideas, gratitude, what went well…">${esc(W.notes)}</textarea></div></div>`;
+  h+=`<div class="card tp c-notes" style="--c:var(--blush)"><h3><em>Notes</em> of the week</h3><textarea class="lined" style="min-height:140px" data-in="wnotes" placeholder="ideas, gratitude, what went well…">${esc(W.notes)}</textarea></div></div>`;
   return h}
 function taskSheet(k,editId){
   const t=editId?dayData(k).tasks.find(x=>x.id===editId):null;
@@ -100,7 +102,7 @@ function pCal(){
   <div class="wkbar"><button class="round" data-act="calPrev">‹</button><div class="mid"><div class="t"><em>${MONTHS[m]}</em> ${y}</div><div class="k" style="margin-top:6px">tap a day to open it</div></div><button class="round" data-act="calNext">›</button></div>
   <div class="chips"><a class="chip" href="#week">Week</a><a class="chip" href="#today">Today</a><button class="chip on">Month</button></div>
   ${g}
-  <div class="legend"><span style="color:var(--c-task)">Tasks</span>${MODS.slice(0,5).map(x=>`<span style="color:${x.col}">${x.short==='Dissertation'?'Diss.':x.short}</span>`).join('')}<span style="color:var(--c-groc)">Groceries</span></div>
+  <div class="legend"><span style="color:var(--c-task)">Tasks</span>${MODS.slice(0,5).map(x=>`<span style="color:${x.col}">${modShort(x)}</span>`).join('')}<span style="color:var(--c-groc)">Groceries</span></div>
   <div class="card tp" style="--c:var(--pink)"><h3><em>Coming</em> up <small>next 2 weeks</small></h3>${up.length?up.map(x=>`<div class="li"><span class="meta" style="width:52px">${fmtDay(parseKey(x.k)).slice(0,6)}</span><span style="width:3px;height:20px;background:${x.col};border-radius:2px"></span><span class="tx">${esc(x.t)}</span></div>`).join(''):'<div class="hint">Nothing planned — enjoy ♡</div>'}</div></div>`}
 function daySheet(k){const its=datedItems(k),d=parseKey(k);
   sheet(`<div style="padding:0 16px">${title(DAYS[dow(d)],`${d.getDate()} ${MON3[d.getMonth()]}`,'')}
@@ -108,10 +110,10 @@ function daySheet(k){const its=datedItems(k),d=parseKey(k);
   <div class="btns" style="margin:14px 0 0"><button class="btn" data-act="openDayWeek" data-k="${k}">Open in week</button><button class="btn d" data-act="taskMore" data-k="${k}">+ Add</button></div></div>`)}
 
 /* ================= SEMESTER ================= */
-function pSem(){const nb=blockOf(today()),cur=nb<0?0:nb;const wkN=BLOCKS[cur].brk?9:BLOCKS[cur].num;
+function pSem(){const nb=blockOf(today()),cur=nb<0?0:nb;const wkN=BLOCKS[cur].brk?0:BLOCKS[cur].num,nW=BLOCKS.filter(b=>!b.brk).length,last=BLOCKS[BLOCKS.length-1];
   const cols=['var(--blush)','var(--pink)','var(--lilac)'];
-  return `<div class="page">${brand()}${title('The','SEMESTER','19 Oct → 21 Feb')}
-  <div class="card tp" style="--c:var(--lemon)"><div class="row"><div class="grow"><div class="k">Semester progress</div><div style="font:500 1.35rem var(--serif);color:var(--rd)">${BLOCKS[cur].brk?'Midterm break':'Week '+wkN+' of 15'}</div><div class="prog" style="margin-top:6px"><i style="width:${Math.round((cur+1)/18*100)}%"></i></div></div><a class="btn d" href="#wrapped">Wrapped ›</a></div></div>
+  return `<div class="page">${brand()}${title('The','SEMESTER',`${BLOCKS[0].start.getDate()} ${MON3[BLOCKS[0].start.getMonth()]} → ${last.end.getDate()} ${MON3[last.end.getMonth()]}`)}
+  <div class="card tp" style="--c:var(--lemon)"><div class="row"><div class="grow"><div class="k">Semester progress</div><div style="font:500 1.35rem var(--serif);color:var(--rd)">${BLOCKS[cur].brk?'Midterm break':'Week '+wkN+' of '+nW}</div><div class="prog" style="margin-top:6px"><i style="width:${Math.round((cur+1)/BLOCKS.length*100)}%"></i></div></div><a class="btn d" href="#wrapped">Wrapped ›</a></div></div>
   <div class="tickets">${BLOCKS.map((b,i)=>{let t=0,dn=0;for(let j=0;j<7;j++)for(const x of dayItems(key(addDays(b.start,j)))){t++;if(x.d)dn++}
     return `<button class="tk ${nb===i?'now':''}" style="background:${b.brk?'repeating-linear-gradient(90deg,var(--sage) 0 14px,var(--paper) 14px 28px)':cols[i%3]}" data-act="goWeek" data-i="${i}"><span class="big">${b.brk?'B'+b.num:pad(b.num)}</span><div class="n" style="position:relative">${blockName(b)}</div><div class="d" style="position:relative">${fmtRange(b)}</div><div style="position:relative;margin-top:5px">${modeTag(b)}</div><div class="k" style="position:relative;margin-top:5px;color:inherit">${dn}/${t} done</div></button>`}).join('')}</div></div>`}
 function wrappedStats(){let done=0,tot=0;for(const b of BLOCKS)for(let j=0;j<7;j++)for(const x of dayItems(key(addDays(b.start,j)))){tot++;if(x.d)done++}
@@ -120,10 +122,10 @@ function wrappedStats(){let done=0,tot=0;for(const b of BLOCKS)for(let j=0;j<7;j
   return{done,tot,hours:mins/60,best:Math.max(S.best,streak()),spent,top,stickers:Object.keys(S.stickers).length}}
 function pWrapped(){const w=wrappedStats(),h=v=>v>=10?Math.round(v):Math.round(v*10)/10;
   return `<div class="page">${brand()}<a class="back" href="#sem">‹ Semester</a>
-  <div class="wrapped"><div class="lab">Year 3 · Semester 2</div><div style="font:400 2.6rem/1 var(--script);color:#F6DCE0;margin-top:8px">Your semester</div><div style="font:500 1.9rem/1 var(--serif);letter-spacing:.06em">WRAPPED</div>
+  <div class="wrapped"><div class="lab">${esc(P().label)}</div><div style="font:400 2.6rem/1 var(--script);color:#F6DCE0;margin-top:8px">Your semester</div><div style="font:500 1.9rem/1 var(--serif);letter-spacing:.06em">WRAPPED</div>
   <div class="g"><div class="bx" style="animation-delay:.1s"><b>${w.done}</b><span class="lab">tasks done</span></div><div class="bx" style="animation-delay:.25s"><b>${h(w.hours)} h</b><span class="lab">focus time</span></div><div class="bx" style="animation-delay:.4s"><b>${w.best}</b><span class="lab">best streak (days)</span></div><div class="bx" style="animation-delay:.55s"><b>${rs(w.spent)}</b><span class="lab">groceries spent</span></div></div>
   <div class="bx" style="margin-top:10px;animation-delay:.7s"><span class="lab">Most studied</span><b style="font-size:1.25rem;margin-top:4px">${w.top.length?modById(w.top[0][0]).short+' · '+h(w.top[0][1]/60)+' h':'Start a focus session ✦'}</b>${w.top.slice(1,3).map(([m,v])=>`<span class="lab" style="color:#F6DCE0;margin-right:10px">${modById(m).short} ${h(v/60)} h</span>`).join('')}</div>
-  <div style="margin-top:16px;text-align:center;font:italic 500 1.05rem var(--hand)">“más amor, por favor” ♡ ${w.stickers} sticker${w.stickers===1?'':'s'} collected</div></div>
+  <div style="margin-top:16px;text-align:center;font:italic 500 1.05rem var(--hand)">“${esc(P().tagline)}” ♡ ${w.stickers} sticker${w.stickers===1?'':'s'} collected</div></div>
   <div class="hint" style="text-align:center;margin-top:10px">Take a screenshot to share it ♡</div></div>`}
 
 /* ================= CALORIES ================= */
@@ -131,17 +133,17 @@ function pKcal(){const k=S.ui.kcalKey||TK(),d=parseKey(k),D=S.cal[k]||{q:{},wate
   const eaten=S.foods.filter(f=>+(D.q||{})[f.id]>0);
   return `<div class="page">${brand()}
   <div class="wkbar"><button class="round" data-act="kPrev">‹</button><div class="mid"><div class="t"><em>${DAYS[dow(d)]}</em> ${d.getDate()} ${MON3[d.getMonth()]}</div>${k!==TK()?'<button class="k" data-act="kToday" style="margin-top:6px;text-decoration:underline">back to today</button>':''}</div><button class="round" data-act="kNext">›</button></div>
-  <div class="card tp" style="--c:var(--pink);text-align:center"><h3 style="justify-content:flex-start"><em>Calories</em> today ${I('pulse')}</h3>
+  <div class="card tp c-ring" style="--c:var(--pink);text-align:center"><h3 style="justify-content:flex-start"><em>Calories</em> today ${I('pulse')}</h3>
    <svg class="ring" viewBox="0 0 120 120" width="160" height="160"><circle cx="60" cy="60" r="52" fill="none" stroke="var(--blush)" stroke-width="7"/><circle class="fg" cx="60" cy="60" r="52" fill="none" stroke="var(--rose)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 60 60)" opacity="${p?1:0}"/><text x="60" y="64" text-anchor="middle" font-family="Bodoni Moda" font-size="26" fill="var(--rd)">${tot.toLocaleString('en-US')}</text><text x="60" y="80" text-anchor="middle" font-family="Jost" font-size="7" letter-spacing="2" fill="var(--muted)">KCAL</text></svg>
    <div class="k">goal <input type="number" inputmode="numeric" data-in="calGoal" value="${esc(S.calGoal)}" style="width:70px;text-align:center;font:500 1rem var(--serif);color:var(--ink);border-bottom:1px solid var(--line)"> kcal · ${goal?(tot<=goal?rs(goal-tot).replace('Rs ','')+' left':'+'+(tot-goal)+' over'):''}</div></div>
-  <div class="card tp" style="--c:var(--sage)"><h3><em>Hydration</em> ${I('drop')} <small>1 glass ≈ 250 ml · ${D.water||0}/8</small></h3><div class="drops">${[1,2,3,4,5,6,7,8].map(n=>`<button class="${n<=(D.water||0)?'on':''}" data-act="water" data-n="${n}" aria-label="${n} glasses">${I('drop')}</button>`).join('')}</div></div>
-  <div class="card tp" style="--c:var(--lilac)"><h3><em>Eaten</em> today <small>${eaten.length+(D.extra||[]).length} items</small></h3>
+  <div class="card tp c-water" style="--c:var(--sage)"><h3><em>Hydration</em> ${I('drop')} <small>1 glass ≈ 250 ml · ${D.water||0}/${S.waterGoal}</small></h3><div class="drops">${Array.from({length:S.waterGoal},(_,i)=>i+1).map(n=>`<button class="${n<=(D.water||0)?'on':''}" data-act="water" data-n="${n}" aria-label="${n} glasses">${I('drop')}</button>`).join('')}</div></div>
+  <div class="card tp c-eaten" style="--c:var(--lilac)"><h3><em>Eaten</em> today <small>${eaten.length+(D.extra||[]).length} items</small></h3>
    ${eaten.map(f=>`<div class="food has"><span class="nm">${esc(f.name)}<small>${f.kcal} ${perLbl(f)}</small></span><span class="step"><button data-act="kMinus" data-id="${f.id}">−</button><input type="number" inputmode="decimal" data-in="kq" data-id="${f.id}" value="${D.q[f.id]}"><span class="u">${qLbl(f)}</span><button data-act="kPlus" data-id="${f.id}">+</button></span><span class="kv">${Math.round(kOf(f,D.q[f.id]))}</span></div>`).join('')}
    ${(D.extra||[]).map((x,j)=>`<div class="food has"><span class="nm">${esc(x.t)}<small>other</small></span><span class="kv">${Math.round(x.k)}</span><button class="x" data-act="exDel" data-j="${j}">✕</button></div>`).join('')}
    ${!eaten.length&&!(D.extra||[]).length?'<div class="hint">Nothing logged yet.</div>':''}
    <button class="btn d full" data-act="foodSheet" style="margin-top:12px">+ Add what I ate</button><div class="hint" style="text-align:center;margin-top:4px">the full food list opens from this button</div></div></div>`}
 function foodSheet(filter=''){const k=S.ui.kcalKey||TK(),D=calDay(k);const q=filter.trim().toLowerCase();
-  const rows=c=>S.foods.filter(f=>f.cat===c&&(!q||f.name.toLowerCase().includes(q))).map(f=>{const v=+D.q[f.id]||0;return `<div class="food ${v?'has':''}"><span class="nm">${esc(f.name)}<small><input type="number" inputmode="decimal" data-in="fk" data-id="${f.id}" value="${f.kcal}" style="width:40px;font:inherit;color:var(--rd);border-bottom:1px solid var(--soft)"> ${perLbl(f)}</small></span><span class="step"><button data-act="kMinus" data-id="${f.id}" data-sh="1">−</button><input type="number" inputmode="decimal" data-in="kq" data-id="${f.id}" data-sh="1" value="${v||''}" placeholder="0"><span class="u">${qLbl(f)}</span><button data-act="kPlus" data-id="${f.id}" data-sh="1">+</button></span><span class="kv">${v?Math.round(kOf(f,v)):'—'}</span>${f.custom?`<button class="x" data-act="foodDel" data-id="${f.id}">✕</button>`:''}</div>`}).join('');
+  const rows=c=>S.foods.filter(f=>f.cat===c&&(!q||f.name.toLowerCase().includes(q))).map(f=>{const v=+D.q[f.id]||0;return `<div class="food ${v?'has':''}"><span class="nm">${esc(f.name)}<small><input type="number" inputmode="decimal" data-in="fk" data-id="${f.id}" value="${f.kcal}" style="width:40px;font:inherit;color:var(--rd);border-bottom:1px solid var(--soft)"> ${perLbl(f)}</small></span><span class="step"><button data-act="kMinus" data-id="${f.id}" data-sh="1">−</button><input type="number" inputmode="decimal" data-in="kq" data-id="${f.id}" data-sh="1" value="${v||''}" placeholder="0"><span class="u">${qLbl(f)}</span><button data-act="kPlus" data-id="${f.id}" data-sh="1">+</button></span><span class="kv">${v?Math.round(kOf(f,v)):'—'}</span><button class="x" data-act="foodDel" data-id="${f.id}" aria-label="Remove from list">✕</button></div>`}).join('');
   const open=window._openCats||(window._openCats={starch:true});
   sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Add</em> food</div><button class="chip" data-act="closeSheet">done ✕</button></div>
   <input class="inline-in" id="fsearch" placeholder="search a food…" value="${esc(filter)}" style="margin-top:8px"></div>
@@ -190,7 +192,7 @@ function mealKcal(ings){return Math.round(ings.reduce((a,[n,q])=>{const f=S.food
 const ingTxt=(n,q)=>{const f=S.foods.find(x=>x.name===n);const u=f?(perPiece(f)?(q>1&&f.unit==='unit'?'':' '+f.unit):f.unit):'';return `${q}${f&&!perPiece(f)?' '+u:''} ${n.replace(/ \(.*\)/,'').toLowerCase()}${f&&perPiece(f)&&f.unit!=='unit'?' ('+f.unit+')':''}`};
 const onList=n=>{const b=n.replace(/ \(.*\)/,'').toLowerCase().split(' ')[0];return S.groc.items.some(x=>x.name.toLowerCase().includes(b))};
 function gMenus(){const seed=S.ui.menuSeed||0,M=menuOf(seed),b=blockOf(today());
-  return `<div class="menu"><div class="k" style="letter-spacing:.32em;color:#8B1E2D">${b>=0?blockName(BLOCKS[b]):''}</div><div class="mt">Menu</div><div class="ms">OF THE DAY</div><div style="width:40px;height:32px;margin:6px auto 0;color:#8B1E2D">${BOW}</div>
+  return `<div class="menu"><div class="k" style="letter-spacing:.32em;color:#8B1E2D">${b>=0?blockName(BLOCKS[b]):''}</div><div class="mt">${esc(P().menuTitle)}</div><div class="ms">OF THE DAY</div><div style="width:40px;height:32px;margin:6px auto 0;color:#8B1E2D">${BOW}</div>
   ${M.map(([c,[n,ings,min]])=>{const miss=ings.filter(([x])=>!onList(x));return `<div class="course"><div class="h">${c.toUpperCase()}</div><div class="dish"><span class="n">${esc(n)}</span><span class="dots"></span><span class="kc">${mealKcal(ings)} kcal</span></div><div class="det">${ings.map(([x,q])=>ingTxt(x,q)).join(', ')} · ${min} min</div><div style="text-align:left">${miss.length?`<span class="tag" style="background:var(--blush);color:var(--rd)">${miss.length} to buy</span>`:'<span class="tag t-f2f">all on your list ✓</span>'} <button class="tag" style="background:#fff;color:#A44C61;border:1px solid rgba(164,76,97,.3)" data-act="mealLog" data-c="${c}">+ log to calories</button></div></div>`}).join('')}
   <div class="btns" style="margin:16px 0 0"><button class="btn" data-act="menuNext">Another idea ↻</button><button class="btn d" data-act="menuToList">+ Ingredients to list</button></div></div>`}
 
@@ -203,11 +205,11 @@ function pCheckout(){const G=S.groc,its=G.items.filter(x=>x.checked),calc=its.re
    <div class="btns" style="margin:10px 0 0"><label class="btn" style="cursor:pointer">📷 Scan receipt<input type="file" accept="image/*" capture="environment" id="scanIn" hidden></label><button class="btn d" data-act="gSaveReceipt">Print receipt ›</button></div></div>
   <div class="rcpt" style="margin-top:16px">${receiptBody({items:its.map(x=>({n:x.name,u:x.unit,q:x.qty,p:x.price})),calc,real:real||calc,budget:G.budget+G.approved,date:TK()})}</div></div>`}
 function receiptBody(r){const diff=num(r.real)-num(r.calc);const d=parseKey(r.date),b=blockOf(d);
-  return `<div class="c" style="font:700 .95rem var(--mono);letter-spacing:.1em">MY DAILY JOURNAL</div><div class="c">· groceries ·</div><div class="c">${b>=0?blockName(BLOCKS[b])+' · ':''}${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}</div><div class="hr"></div>
+  return `<div class="c" style="font:700 .95rem var(--mono);letter-spacing:.1em">${esc((P().t1+' '+P().t2+' '+P().t3).toUpperCase())}</div><div class="c">· groceries ·</div><div class="c">${b>=0?blockName(BLOCKS[b])+' · ':''}${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}</div><div class="hr"></div>
   ${r.items.map(x=>`<div class="l"><span>${esc(x.n.toUpperCase())}${x.u?' '+esc(x.u.toUpperCase()):''}${x.q>1?' x'+x.q:''}</span><span>${(x.q*x.p).toFixed(2)}</span></div>`).join('')||'<div class="c">no items</div>'}
   <div class="hr"></div><div class="l"><span>ITEMS</span><span>${r.items.length}</span></div><div class="l"><span>BUDGET</span><span>${num(r.budget).toFixed(2)}</span></div><div class="l"><span>CALCULATED</span><span>${num(r.calc).toFixed(2)}</span></div>
   <div class="tot"><span>REAL TOTAL</span><span>Rs ${num(r.real).toFixed(2)}</span></div>${Math.abs(diff)>.004?`<div class="l" style="color:${diff>0?'#A3283F':'#4f6146'}"><span>DIFFERENCE</span><span>${diff>0?'+':''}${diff.toFixed(2)}</span></div>`:''}
-  <div class="bar2"></div><div class="c" style="font-size:.66rem">thank you &amp; see you next week ♡</div>`}
+  <div class="bar2"></div><div class="c" style="font-size:.66rem">${esc(P().footer)}</div>`}
 function pReceipt(id,printing){const r=S.groc.receipts.find(x=>x.id===id);if(!r)return pGroc('receipts');
   return `<div class="page">${brand()}<a class="back" href="#groc/receipts">‹ Receipts</a>${title('My','RECEIPT',fmtDay(parseKey(r.date)))}
   ${printing?'<div class="printer"></div><div class="printing" id="printing">':''}<div class="rcpt" id="rcptEl">${receiptBody(r)}</div>${printing?'</div>':''}
@@ -218,8 +220,8 @@ function pReceipt(id,printing){const r=S.groc.receipts.find(x=>x.id===id);if(!r)
 function nbLabel(m){if(m.id==='dump')return `${S.dump.length} notes`;if(m.id==='diss'){const s=listStats('diss','tuto');return s.n?`Ch. ${s.d}/${s.n}`:'chapters'}const s=listStats(m.id,'lect');return s.n?`${s.d}/${s.n} notes`:Math.round(modProgress(m.id)*100)+' %'}
 function pBinder(){const rows=[MODS.slice(0,3),MODS.slice(3)];
   return `<div class="page">${brand()}
-  <div style="text-align:center;padding-top:18px"><div class="k">Year 3 · Semester 2</div><div style="font:500 2rem/1 var(--serif);margin-top:6px">MY <span style="font:400 2.6rem var(--script);color:var(--rd)">Binder</span></div><div style="width:44px;height:34px;margin:4px auto 0;color:var(--rd)">${BOW}</div></div>
-  <div class="shelfwrap">${rows.map(r=>`<div class="shelfrow">${r.map(m=>`<a class="nb" href="#${m.id==='dump'?'dump':'mod/'+m.id}"><img src="assets/${m.id}.webp" alt="${esc(m.name)}"></a>`).join('')}<div class="shelf"></div></div><div class="nbl">${r.map(m=>`<span>${m.short==='Dissertation'?'Diss.':m.short} · <b>${nbLabel(m)}</b></span>`).join('')}</div>`).join('<div style="height:14px"></div>')}</div></div>`}
+  <div style="text-align:center;padding-top:18px"><div class="k">${esc(P().label)}</div><div style="font:500 2rem/1 var(--serif);margin-top:6px">MY <span style="font:400 2.6rem var(--script);color:var(--rd)">Binder</span></div><div style="width:44px;height:34px;margin:4px auto 0;color:var(--rd)">${BOW}</div></div>
+  <div class="shelfwrap">${rows.map(r=>`<div class="shelfrow">${r.map(m=>`<a class="nb" href="#${m.id==='dump'?'dump':'mod/'+m.id}"><img src="${coverSrc(m)}" alt="${esc(m.name)}"></a>`).join('')}<div class="shelf"></div></div><div class="nbl">${r.map(m=>`<span>${modShort(m)} · <b>${nbLabel(m)}</b></span>`).join('')}</div>`).join('<div style="height:14px"></div>')}</div></div>`}
 function pMod(id){const m=modById(id);if(!m||id==='dump')return pDump();const M=S.mods[id],tab=S.ui.modTab[id]||'todo',ov=modProgress(id);
   const tiles=['todo','assign','tuto','lect'].map((l,i)=>{const s=listStats(id,l);return `<button class="pt ${tab===l?'on':''}" style="--c:${['var(--pink)','var(--sage)','var(--lilac)','var(--lemon)'][i]}" data-act="modTab" data-mod="${id}" data-l="${l}"><div class="n">${listLabel(id,l)}</div><div class="v"><b>${s.d}</b><span>/ ${s.n}</span></div><div class="prog"><i style="width:${Math.round(s.p*100)}%"></i></div></button>`}).join('');
   const items=M[tab];const stKey=tab==='tuto'&&id==='diss'?'tuto_diss':tab;
@@ -228,13 +230,13 @@ function pMod(id){const m=modById(id);if(!m||id==='dump')return pDump();const M=
     return `<div class="sw-row" data-swipe="mod" data-mod="${id}" data-l="${tab}" data-j="${j}"><div class="del">${I('trash')}Delete</div><div class="fg">${stc?'':box(x.d,'modTog',`data-mod="${id}" data-l="${tab}" data-j="${j}"`)}${date}<span class="tx grow" contenteditable="true" spellcheck="false" data-in="modT" data-mod="${id}" data-l="${tab}" data-j="${j}" style="font:500 1.03rem/1.2 var(--hand);outline:none;${x.d?'text-decoration:line-through;color:var(--muted)':''}">${esc(x.t)}</span>${st}</div></div>`}).join('');
   const G=gradeNeeds(id);const tgt=M.target||'A';const tg=G.grades.find(g=>g.g===tgt)||G.grades[0];
   return `<div class="page">${brand()}<a class="back" href="#binder">‹ My binder</a>
-  <div class="modhead"><img src="assets/${id}.webp" alt=""><div class="grow"><div class="k">Module</div><div class="t">${esc(m.name)}</div><div class="row" style="margin-top:8px"><div class="prog grow"><i style="width:${Math.round(ov*100)}%;background:var(--wine)"></i></div><span style="font:500 1.1rem var(--serif);color:var(--rd)">${Math.round(ov*100)}%</span></div><div class="k" style="margin-top:2px">overall progress</div></div></div>
+  <div class="modhead"><img src="${coverSrc(m)}" alt=""><div class="grow"><div class="k">Module</div><div class="t">${esc(m.name)}</div><div class="row" style="margin-top:8px"><div class="prog grow"><i style="width:${Math.round(ov*100)}%;background:var(--wine)"></i></div><span style="font:500 1.1rem var(--serif);color:var(--rd)">${Math.round(ov*100)}%</span></div><div class="k" style="margin-top:2px">overall progress</div></div></div>
   <div class="ptiles">${tiles}</div>
-  <div class="card tp" style="--c:var(--pink)"><h3><em>${listLabel(id,tab)}</em><small>dated items go to the calendar</small></h3>${rows||'<div class="hint">Nothing yet.</div>'}
+  <div class="card tp c-list" style="--c:var(--pink)"><h3><em>${listLabel(id,tab)}</em><small>dated items go to the calendar</small></h3>${rows||'<div class="hint">Nothing yet.</div>'}
    <div class="addf"><div class="r" style="margin:0"><div class="field grow"><input id="mi-t" placeholder="+ add ${listLabel(id,tab).toLowerCase().replace(/s$/,'')}…"></div><div class="field" style="width:132px"><input id="mi-d" type="date"></div></div><button class="btn d full" data-act="modAdd" data-mod="${id}" data-l="${tab}" style="margin-top:8px">Add</button></div></div>
-  <div class="card tp" style="--c:var(--sage)"><h3><em>Links</em> &amp; files</h3><div class="links">${M.links.map((L,j)=>`<span style="display:inline-flex;align-items:center;gap:2px"><a href="${L.file?'#':esc(L.url)}" ${L.file?`data-act="openFile" data-f="${L.file}"`:'target="_blank" rel="noopener"'}>${L.file?'📄':'▶'} ${esc(L.label)}</a><button class="x" data-act="linkDel" data-mod="${id}" data-j="${j}">✕</button></span>`).join('')||'<span class="hint">Class link, slides, WhatsApp group…</span>'}</div>
+  <div class="card tp c-links" style="--c:var(--sage)"><h3><em>Links</em> &amp; files</h3><div class="links">${M.links.map((L,j)=>`<span style="display:inline-flex;align-items:center;gap:2px"><a href="${L.file?'#':esc(L.url)}" ${L.file?`data-act="openFile" data-f="${L.file}"`:'target="_blank" rel="noopener"'}>${L.file?'📄':'▶'} ${esc(L.label)}</a><button class="x" data-act="linkDel" data-mod="${id}" data-j="${j}">✕</button></span>`).join('')||'<span class="hint">Class link, slides, WhatsApp group…</span>'}</div>
    <div class="addf"><div class="r" style="margin:0"><div class="field grow"><input id="ln-l" placeholder="label (e.g. Online class)"></div></div><div class="r"><div class="field grow"><input id="ln-u" placeholder="https://…"></div></div><div class="btns" style="margin:8px 0 0"><label class="btn" style="cursor:pointer">📄 Attach file<input type="file" id="ln-f" data-mod="${id}" hidden></label><button class="btn d" data-act="linkAdd" data-mod="${id}">Add link</button></div></div></div>
-  <div class="card tp" style="--c:var(--lilac)"><h3><em>Grades</em> tests ${G.tw}% · exam ${G.ew}%</h3>
+  <div class="card tp c-grades" style="--c:var(--lilac)"><h3><em>Grades</em> tests ${G.tw}% · exam ${G.ew}%</h3>
    ${M.tests.map((t,j)=>`<div class="li"><input class="inline-in" style="flex:1;border:0" data-in="testN" data-mod="${id}" data-j="${j}" value="${esc(t.name)}"><input type="number" inputmode="decimal" class="price" style="width:52px" data-in="testS" data-mod="${id}" data-j="${j}" value="${esc(t.score)}" placeholder="/100"><input type="number" inputmode="decimal" class="price" style="width:40px" data-in="testW" data-mod="${id}" data-j="${j}" value="${esc(t.weight)}"><span class="meta">%</span><button class="x" data-act="testDel" data-mod="${id}" data-j="${j}">✕</button></div>`).join('')}
    <div class="li"><span class="tx">Final exam</span><input type="number" class="price" style="width:40px" data-in="examW" data-mod="${id}" value="${G.ew}"><span class="meta">%</span></div>
    <button class="btn sm" data-act="testAdd" data-mod="${id}" style="margin-top:8px">+ add a test</button>
@@ -245,7 +247,7 @@ function pMod(id){const m=modById(id);if(!m||id==='dump')return pDump();const M=
    <div class="hint" style="text-align:center;margin-top:6px">empty test scores count as 0 · tap a grade to set your target</div></div></div>`}
 function pDump(){const cols=['#FBF8F1','#E8EDE2','#F6DCE0','#F1E6BE','#EBCDE2'];
   return `<div class="page">${brand()}<a class="back" href="#binder">‹ My binder</a>
-  <div class="modhead"><img src="assets/dump.webp" alt=""><div><div class="k">Notebook 06</div><div class="t">Brain dump</div><div class="hint">empty your head, sort later</div></div></div>
+  <div class="modhead"><img src="${coverSrc(modById('dump'))}" alt=""><div><div class="k">Notebook 06</div><div class="t">${esc(modById('dump').name)}</div><div class="hint">empty your head, sort later</div></div></div>
   <div class="card"><div class="row"><input class="inline-in grow" id="dump-in" placeholder="write whatever's on your mind…"><button class="btn d sm" data-act="dumpAdd">+ Note</button></div>
   ${S.dump.map((n,j)=>`<div class="slip" style="background-color:${cols[j%cols.length]};transform:rotate(${(j%2?1:-1)*.8}deg)"><div class="tx" contenteditable="true" spellcheck="false" data-in="dumpT" data-j="${j}">${esc(n.t)}</div><div class="acts"><button data-act="dumpToday" data-j="${j}">→ today</button><button data-act="dumpNb" data-j="${j}">→ notebook</button><button data-act="dumpGroc" data-j="${j}">→ groceries</button><button data-act="dumpDel" data-j="${j}" style="margin-left:auto;color:#8C5E68">✕</button></div></div>`).join('')||'<div class="hint" style="margin-top:10px">Nothing here yet ♡</div>'}</div></div>`}
 
@@ -255,9 +257,9 @@ function pFocus(){const F=S.focus,run=F.run;const total=(F[F.mode]||25)*60;let r
   return `<div class="page">${brand()}${title('Focus','TIME','pomodoro')}
   <div class="chips" style="justify-content:center">${[['work','Focus'],['short','Short break'],['long','Long break']].map(([v,l])=>`<button class="chip ${F.mode===v?'on':''}" data-act="fMode" data-v="${v}">${l} ${F[v]}</button>`).join('')}</div>
   <svg class="fring" viewBox="0 0 200 200"><circle cx="100" cy="100" r="86" fill="var(--card)" stroke="var(--blush)" stroke-width="10"/><circle id="fArc" cx="100" cy="100" r="86" fill="none" stroke="var(--rose)" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 100 100)"/><text id="fTime" x="100" y="106" text-anchor="middle" font-family="Bodoni Moda" font-size="40" fill="var(--ink)">${pad(Math.floor(rem/60))}:${pad(rem%60)}</text><text x="100" y="130" text-anchor="middle" font-family="Jost" font-size="8" letter-spacing="2.5" fill="var(--muted)">SESSION ${F.done%4+1} OF 4</text></svg>
-  <div class="chips" style="justify-content:center">${MODS.filter(m=>m.id!=='dump').map(m=>`<button class="chip ${F.mod===m.id?'on':''}" data-act="fMod" data-v="${m.id}">${m.short==='Dissertation'?'Diss.':m.short}</button>`).join('')}</div>
+  <div class="chips" style="justify-content:center">${MODS.filter(m=>m.id!=='dump').map(m=>`<button class="chip ${F.mod===m.id?'on':''}" data-act="fMod" data-v="${m.id}">${modShort(m)}</button>`).join('')}</div>
   <div class="btns"><button class="btn" data-act="fReset">Reset</button><button class="btn d" data-act="fStart">${run&&!run.paused?'Pause':run?'Resume':'Start'}</button><button class="btn" data-act="fEdit">Edit ✎</button></div>
-  <div class="card tp" style="--c:var(--sage)"><h3><em>This week</em> by module</h3>${MODS.filter(m=>m.id!=='dump').map(m=>{const v=per[m.id]||0;return `<div class="fstat"><span class="k">${m.short==='Dissertation'?'Diss.':m.short}</span><span class="prog grow"><i style="width:${v/mx*100}%;background:${m.col}"></i></span><span style="font:500 .85rem var(--serif);width:46px;text-align:right">${v>=60?Math.round(v/6)/10+' h':v+' m'}</span></div>`}).join('')}</div></div>`}
+  <div class="card tp" style="--c:var(--sage)"><h3><em>This week</em> by module</h3>${MODS.filter(m=>m.id!=='dump').map(m=>{const v=per[m.id]||0;return `<div class="fstat"><span class="k">${modShort(m)}</span><span class="prog grow"><i style="width:${v/mx*100}%;background:${m.col}"></i></span><span style="font:500 .85rem var(--serif);width:46px;text-align:right">${v>=60?Math.round(v/6)/10+' h':v+' m'}</span></div>`}).join('')}</div></div>`}
 
 /* ================= STICKERS ================= */
 const STICKERS=[
@@ -270,13 +272,13 @@ const STICKERS=[
  ['budget','🛒','Groceries under budget',()=>S.groc.receipts.some(r=>num(r.real)<=num(r.budget))],
  ['focus10','📚','10 h of focus',()=>S.focus.log.reduce((a,l)=>a+l.mins,0)>=600],
  ['notes','✦','All lecture notes of a module',()=>MODS.some(m=>{const s=listStats(m.id,'lect');return s.n>=3&&s.d===s.n})],
- ['water','💧','8 glasses in a day',()=>Object.values(S.cal).some(c=>c.water>=8)],
+ ['water','💧','Water goal reached',()=>Object.values(S.cal).some(c=>c.water>=S.waterGoal)],
  ['tasks50','✿','50 tasks done',()=>Object.values(S.days).reduce((a,d)=>a+d.tasks.filter(t=>t.d).length,0)>=50],
  ['receipt','🧾','First receipt saved',()=>S.groc.receipts.length>0],
  ['gradeA','🅰','Target A within reach',()=>MODS.some(m=>m.id!=='dump'&&S.mods[m.id].tests.some(t=>t.score!=='')&&(gradeNeeds(m.id).grades[0].need??999)<=80)],
  ['dump10','🧠','10 brain-dump notes sorted',()=>(S.sorted||0)>=10],
  ['wk','🌷','A full week of habits',()=>Object.values(S.weeks).some(w=>w.habits.some((h,i)=>[0,1,2,3,4,5,6].every(d=>w.hab[i+'-'+d])))],
- ['semester','🎓','Semester completed',()=>today()>BLOCKS[17].end]];
+ ['semester','🎓','Semester completed',()=>today()>BLOCKS[BLOCKS.length-1].end]];
 function checkStickers(){let n=null;for(const[id,e,l,f]of STICKERS){try{if(!S.stickers[id]&&f()){S.stickers[id]=TK();n=[e,l]}}catch(err){}}if(n){toast(`New sticker unlocked ${n[0]} ${n[1]}`);confetti(18)}}
 function pStickers(){const st=streak();
   return `<div class="page">${brand()}${title('My','STICKERS',Object.keys(S.stickers).length+' / '+STICKERS.length)}
@@ -285,18 +287,36 @@ function pStickers(){const st=streak();
   <div class="hint" style="text-align:center;margin:12px 16px 0">A day counts in your streak when you tick something in the planner.</div></div>`}
 
 /* ================= SETTINGS ================= */
+function ago(t){const m=Math.round((Date.now()-t)/60000);return m<1?'just now':m<60?m+' min ago':Math.round(m/60)+' h ago'}
+function notifLabel(){const sup=pushSupport();if(!('Notification'in window))return sup==='ios-browser'?'add to Home Screen first':'not supported';if(Notification.permission==='denied')return'blocked';if(!remindersOn())return'off';if(PUSH.sub)return serverPushActive()?'on · even when closed':'on';return'on · while open'}
 function pSettings(){const L=S.lock,R=S.rem,sw=(on,act,extra='')=>`<button class="sw ${on?'on':''}" data-act="${act}" ${extra}></button>`;
   const perm=('Notification'in window)?Notification.permission:'unsupported';
   return `<div class="page">${brand()}${title('My','SETTINGS','')}
+  <div class="card set"><h3>Personalize · texts</h3>
+   ${[['name','Your name'],['hello','Greeting'],['tagline','Tagline'],['label','Cover label'],['t1','Title · word 1'],['t2','Title · script word'],['t3','Title · word 3'],['big1','Cover big number 1'],['big2','Cover big number 2'],['spine','Cover spine text'],['menuTitle','Menu title'],['footer','Receipt footer']].map(([k,l])=>`<div class="r"><span style="width:44%">${l}</span><input class="inline-in" style="flex:1;text-align:right" data-in="prof" data-k="${k}" value="${esc(S.prof[k])}"></div>`).join('')}
+   <div class="r"><span class="hint">Changes show everywhere right away.</span><button class="v" data-act="profReset">reset texts</button></div></div>
+  <div class="card set"><h3>Semester dates</h3>
+   <div class="r">First Monday<input type="date" data-in="sem" data-k="start" value="${esc(S.sem.start)}" style="margin-left:auto;font:500 .9rem var(--sans);color:var(--rd)"></div>
+   <div class="r">Teaching weeks<input type="number" inputmode="numeric" class="price" style="margin-left:auto;width:60px" data-in="sem" data-k="weeks" value="${S.sem.weeks}"></div>
+   <div class="r">Break starts after week<input type="number" inputmode="numeric" class="price" style="margin-left:auto;width:60px" data-in="sem" data-k="breakAfter" value="${S.sem.breakAfter}"></div>
+   <div class="r">Break length (weeks)<input type="number" inputmode="numeric" class="price" style="margin-left:auto;width:60px" data-in="sem" data-k="breakLen" value="${S.sem.breakLen}"></div>
+   <div class="r"><span class="hint">${BLOCKS.length} weeks · ${fmtRange(BLOCKS[0])} → ${fmtRange(BLOCKS[BLOCKS.length-1])}</span></div></div>
+  <div class="card set"><h3>Notebooks</h3>
+   ${MODS.map(m=>`<div class="r" style="align-items:flex-start"><img src="${coverSrc(m)}" alt="" style="width:46px;flex:none"><div class="grow"><input class="inline-in" data-in="modName" data-mod="${m.id}" value="${esc(m.name)}" aria-label="Full name"><input class="inline-in" style="font-size:.9rem" data-in="modShort" data-mod="${m.id}" value="${esc(m.short)}" aria-label="Short name"><div style="display:flex;gap:6px;margin-top:6px"><label class="btn sm" style="cursor:pointer">Change cover<input type="file" accept="image/*" data-cover="${m.id}" hidden></label>${m.cover?`<button class="btn sm" data-act="coverReset" data-mod="${m.id}">Original</button>`:''}</div></div></div>`).join('')}</div>
+  <div class="card set"><h3>Goals</h3>
+   <div class="r">Calories per day<input type="number" inputmode="numeric" class="price" style="margin-left:auto;width:70px" data-in="calGoal" value="${S.calGoal}"></div>
+   <div class="r">Glasses of water per day<input type="number" inputmode="numeric" class="price" style="margin-left:auto;width:70px" data-in="waterGoal" value="${S.waterGoal}"></div>
+   <div class="r">Groceries budget<input type="number" inputmode="decimal" class="price" style="margin-left:auto;width:70px" data-in="gBudget" value="${S.groc.budget}"></div></div>
   <div class="card set"><h3>Theme</h3><div class="themes">${[['rose','#F6DCE0','#A44C61'],['sage','#E3EBDD','#4F6E45'],['lilac','#EFE2F0','#7D4A88'],['butter','#F7EFD2','#8B1E2D']].map(([t,a,b])=>`<button class="${S.set.theme===t?'on':''}" style="background:linear-gradient(135deg,${a} 50%,${b} 50%)" data-act="theme" data-v="${t}" aria-label="${t}"></button>`).join('')}</div><div class="lbls k"><span>Rose</span><span>Sage</span><span>Lilac</span><span>Butter</span></div>
    <div class="r" style="margin-top:8px">Dark mode<span class="v" style="display:flex;gap:4px">${['auto','on','off'].map(v=>`<button class="chip ${S.set.dark===v?'on':''}" data-act="dark" data-v="${v}">${v}</button>`).join('')}</span></div>
    <div class="r">Opening animation${sw(S.set.intro,'introTog','style="margin-left:auto"')}</div></div>
   <div class="card set"><h3>Security</h3><div class="r">PIN code<button class="v" data-act="pinSet">${L.pin?'change':'set a PIN'}</button></div>${L.pin?`<div class="r">Face ID / fingerprint${sw(!!L.faceId,'faceTog','style="margin-left:auto"')}</div><div class="r">Lock after<span class="v" style="display:flex;gap:4px">${[0,1,5].map(v=>`<button class="chip ${L.after===v?'on':''}" data-act="lockAfter" data-v="${v}">${v?v+' min':'now'}</button>`).join('')}</span></div><div class="r">Remove PIN<button class="v" data-act="pinOff">remove</button></div>`:''}</div>
-  <div class="card set"><h3>Reminders</h3>${perm!=='granted'?`<div class="r">Allow notifications<button class="btn sm d" style="margin-left:auto" data-act="notifAsk">${perm==='denied'?'blocked in browser':'allow'}</button></div>`:''}
+  <div class="card set"><h3>Sync across devices</h3>${SYNC.conf?`<div class="r">✓ On · ${SYNC.status==='offline'?'offline — will sync when back online':SYNC.last?'last sync '+ago(SYNC.last):'syncing…'}</div><div class="r">This device<span class="v">${esc(devId().slice(0,6))}</span></div><div class="r">Sync now<button class="v" data-act="syncNow">sync</button></div><div class="r">Turn off on this device<button class="v" data-act="syncOff">turn off</button></div>`:`<div class="r"><span class="hint">Your journal on your phone, iPad and computer. Everything saves on its own — you only type your personal code once per device.</span></div><button class="btn d full" data-act="syncOn" style="margin-top:6px">Turn on sync</button>`}</div>
+  <div class="card set"><h3>Reminders</h3><div class="r">Notifications<span class="hint" style="margin-left:auto;margin-right:8px">${notifLabel()}</span>${remindersOn()?`${pushSupport()==='push'&&!PUSH.sub?'<button class="v" data-act="notifOn" style="margin-right:10px">connect</button>':''}<button class="v" data-act="notifOff">turn off</button>`:`<button class="btn sm d" data-act="notifOn">${perm==='denied'?'help':'turn on'}</button>`}</div>${isIOS&&!isStandalone()?'<div class="r"><span class="hint">On iPhone/iPad: Share → Add to Home Screen, then open the app from its icon to turn reminders on.</span></div>':''}
    <div class="r">Morning to-do${sw(R.morning,'remTog','data-k="morning" style="margin-left:auto"')}</div><div class="r">Time<input type="time" data-in="remTime" data-k="mtime" value="${R.mtime}"></div>
    <div class="r">Day before a deadline${sw(R.dayBefore,'remTog','data-k="dayBefore" style="margin-left:auto"')}</div><div class="r">Time<input type="time" data-in="remTime" data-k="dtime" value="${R.dtime}"></div>
    <div class="r">Also 3 days before${sw(R.three,'remTog','data-k="three" style="margin-left:auto"')}</div><div class="r">Streak reminder (21:00)${sw(R.streak,'remTog','data-k="streak" style="margin-left:auto"')}</div><div class="r">Groceries day (Sat 9:00)${sw(R.groc,'remTog','data-k="groc" style="margin-left:auto"')}</div><div class="r">Water (every 2 h)${sw(R.water,'remTog','data-k="water" style="margin-left:auto"')}</div>
-   <div class="r"><span class="hint">On iPhone, add the app to your home screen to receive reminders.</span><button class="v" data-act="notifTest">test</button></div></div>
+   <div class="r">Send a test notification<button class="v" data-act="notifTest">test</button></div></div>
   <div class="card set"><h3>Semester</h3><div class="r">Odd weeks<span class="v">${S.set.swapWeeks?'face to face':'online'}</span></div><div class="r">Even weeks<span class="v">${S.set.swapWeeks?'online':'face to face'}</span></div><div class="r">Swap online / F2F${sw(S.set.swapWeeks,'swapTog','style="margin-left:auto"')}</div></div>
   <div class="card set"><h3>Export</h3><div class="r">This week as PDF<button class="v" data-act="pdfWeek">⤓ export</button></div><div class="r">This month as PDF<button class="v" data-act="pdfMonth">⤓ export</button></div><div class="r">Backup file (.json)<button class="v" data-act="backup">⤓ save</button></div><div class="r">Import a backup<label class="v" style="cursor:pointer">⤒ import<input type="file" id="importIn" accept="application/json" hidden></label></div></div>
   <div class="card set"><h3>Saving</h3><div class="r">✓ Everything saves automatically on this device</div><div class="r">Daily automatic copies (last 7 days)<button class="v" data-act="snaps">restore…</button></div><div class="r">Trash · ${S.trash.length} item${S.trash.length===1?'':'s'}<a class="v" href="#trash">open ›</a></div></div>

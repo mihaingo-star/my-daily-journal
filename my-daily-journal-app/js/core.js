@@ -19,12 +19,13 @@ const rs=n=>'Rs '+(Math.round((+n||0)*100)/100).toLocaleString('en-US',{minimumF
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?0:n};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-/* ---------- semester ---------- */
-const SEM_START=new Date(2026,9,19);
+/* ---------- semester (configurable in Settings) ---------- */
 const BLOCKS=[];
-(()=>{let w=0,b=0;for(let k=0;k<18;k++){const s=addDays(SEM_START,7*k),brk=k>=9&&k<12;brk?b++:w++;BLOCKS.push({i:k,id:brk?'b'+b:'w'+w,num:brk?b:w,brk,start:s,end:addDays(s,6)})}})();
+function buildBlocks(){const c=(typeof S!=='undefined'&&S&&S.sem)||{start:'2026-10-19',weeks:15,breakAfter:9,breakLen:3};
+  BLOCKS.length=0;const st=parseKey(c.start||'2026-10-19');const W=clamp(+c.weeks||15,1,30),bA=clamp(+c.breakAfter||0,0,W),bL=clamp(+c.breakLen||0,0,8);
+  let w=0,b=0;for(let k=0;k<W+bL;k++){const brk=bL>0&&k>=bA&&k<bA+bL;brk?b++:w++;const s=addDays(st,7*k);BLOCKS.push({i:k,id:brk?'b'+b:'w'+w,num:brk?b:w,brk,bl:bL,start:s,end:addDays(s,6)})}}
 const blockOf=d=>BLOCKS.findIndex(b=>d>=b.start&&d<=b.end);
-const blockName=b=>b.brk?`Midterm break ${b.num}/3`:`Week ${b.num}`;
+const blockName=b=>b.brk?`Midterm break ${b.num}/${b.bl}`:`Week ${b.num}`;
 const isOnline=b=>!b.brk&&((b.num%2===1)!==!!S.set.swapWeeks);
 const modeTag=b=>b.brk?'<span class="tag t-brk">break</span>':isOnline(b)?'<span class="tag t-on">online</span>':'<span class="tag t-f2f">face to face</span>';
 const fmtRange=b=>`${b.start.getDate()} ${MON3[b.start.getMonth()]} – ${b.end.getDate()} ${MON3[b.end.getMonth()]}`;
@@ -38,6 +39,10 @@ const MODS=[
  {id:'km',short:'KM',name:'Knowledge Management',col:'var(--c-km)',hex:'#9a7b2a'},
  {id:'diss',short:'Dissertation',name:'Dissertation',col:'var(--c-diss)',hex:'#7d4a77'},
  {id:'dump',short:'Brain dump',name:'Brain dump',col:'var(--c-task)',hex:'#A44C61'}];
+const MOD_BASE=MODS.map(m=>({...m}));
+function applyModCfg(){for(const m of MODS){const b=MOD_BASE.find(x=>x.id===m.id),c=(S.modCfg||{})[m.id]||{};m.name=c.name||b.name;m.short=c.short||b.short;m.cover=c.cover||null}}
+const coverSrc=m=>m.cover||`assets/${m.id}.webp`;
+const modShort=m=>m.short.length>10?m.short.slice(0,9)+'.':m.short;
 const modById=id=>MODS.find(m=>m.id===id);
 
 /* ---------- foods ---------- */
@@ -67,6 +72,8 @@ const blank=()=>({v:2,days:{},weeks:{},rec:[],recDone:{},recSkip:{},
   lock:{pin:null,salt:null,faceId:null,after:1},
   rem:{morning:true,mtime:'07:30',dayBefore:true,dtime:'19:00',three:true,streak:true,groc:true,water:false},
   set:{theme:'rose',dark:'auto',swapWeeks:false,testsW:30,intro:true},
+  prof:{name:'Mihaingo',hello:'Hello',tagline:'más amor, por favor',label:'Year 3 · Semester 2',big1:'26',big2:'27',spine:'my daily journal',t1:'MY',t2:'Daily',t3:'JOURNAL',footer:'thank you & see you next week ♡',menuTitle:'Menu'},
+  sem:{start:'2026-10-19',weeks:15,breakAfter:9,breakLen:3},modCfg:{},waterGoal:8,
   ui:{week:null,cal:null,todayKey:null,kcalKey:null,grocTab:'list',modTab:{},menuSeed:0}});
 let S;
 function load(){
@@ -75,8 +82,11 @@ function load(){
   const b=blank();for(const k in b){if(S[k]===undefined)S[k]=b[k]}
   for(const k in b.set)if(S.set[k]===undefined)S.set[k]=b.set[k];
   for(const k in b.rem)if(S.rem[k]===undefined)S.rem[k]=b.rem[k];
+  for(const k in b.prof)if(S.prof[k]===undefined)S.prof[k]=b.prof[k];
+  for(const k in b.sem)if(S.sem[k]===undefined)S.sem[k]=b.sem[k];
   for(const m of MODS)if(!S.mods[m.id])S.mods[m.id]=b.mods[m.id];
   const cut=Date.now()-30*864e5;S.trash=S.trash.filter(t=>t.ts>cut);
+  afterLoad();
 }
 function migrateOld(){
   let o=null;try{o=JSON.parse(localStorage.getItem('planner-y3s2-v1'))}catch(e){}
@@ -86,9 +96,10 @@ function migrateOld(){
   if(o.calGoal)S.calGoal=+o.calGoal||1600;
   if(o.cal)for(const[k,c]of Object.entries(o.cal)){if(c&&c.water)S.cal[k]={q:{},water:c.water,extra:(c.extra||[]).map(x=>({id:uid(),t:x.t,k:x.k}))}}
 }
-let saveT=null,saveListeners=[];
-function save(now){clearTimeout(saveT);const run=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Storage is full — export a backup in Settings')}idbPut('state','current',S);snapshot();saveListeners.forEach(f=>f())};now?run():(saveT=setTimeout(run,120))}
-
+let saveT=null,saveListeners=[],lastBody=null;
+function contentOf(){const o={};for(const k in S)if(!['lock','ui','sent','mt'].includes(k))o[k]=S[k];return JSON.stringify(o)}
+function save(now){clearTimeout(saveT);const run=()=>{const b=contentOf(),changed=b!==lastBody;if(changed){S.mt=Date.now();lastBody=b}
+  try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Storage is full — export a backup in Settings')}idbPut('state','current',S);snapshot();if(changed)saveListeners.forEach(f=>{try{f()}catch(e){}})};now?run():(saveT=setTimeout(run,120))}
 /* IndexedDB: mirror + daily snapshots + attached files */
 let _db=null;
 function idb(){if(_db)return _db;_db=new Promise((res,rej)=>{if(!('indexedDB'in window))return rej('no idb');const r=indexedDB.open('mdj',1);r.onupgradeneeded=()=>{const db=r.result;['state','snaps','files'].forEach(n=>db.objectStoreNames.contains(n)||db.createObjectStore(n))};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});return _db}
@@ -100,7 +111,8 @@ let lastSnap=null;
 async function snapshot(){const k=TK();if(lastSnap===k)return;lastSnap=k;await idbPut('snaps',k,JSON.parse(JSON.stringify(S)));const ks=(await idbKeys('snaps')).sort();while(ks.length>7)await idbDel('snaps',ks.shift())}
 async function recoverIfEmpty(){ // if localStorage was wiped but IndexedDB still has data
   if(localStorage.getItem(KEY))return false;const st=await idbGet('state','current');if(st&&st.v){S=st;load2();return true}return false}
-function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k]}
+function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k];for(const g of['set','rem','prof','sem'])for(const k in b[g])if(S[g][k]===undefined)S[g][k]=b[g][k];afterLoad()}
+function afterLoad(){buildBlocks();applyModCfg();lastBody=contentOf()}
 
 /* ---------- activity / streak ---------- */
 function markActive(){const k=TK();if(!S.active[k]){S.active[k]=1;const s=streak();if(s>S.best)S.best=s}}
@@ -128,7 +140,7 @@ function restore(id){const i=S.trash.findIndex(t=>t.id===id);if(i<0)return;const
 
 /* ---------- toast ---------- */
 let toastT=null;
-function toast(msg,undo){const t=$('#toast');t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Undo</button>':''}`;t.classList.add('show');if(undo)t.querySelector('button').onclick=()=>{t.classList.remove('show');undo()};clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),undo?5200:2400)}
+function toast(msg,undo){if(!msg)return;const t=$('#toast');t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button>Undo</button>':''}`;t.classList.add('show');if(undo)t.querySelector('button').onclick=()=>{t.classList.remove('show');undo()};clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),undo?5200:2400)}
 
 /* ---------- sheet ---------- */
 function sheet(html,onMount){const bg=$('#sheetbg'),sh=$('#sheet');sh.innerHTML='<div class="grab"></div>'+html;bg.classList.add('show');sh.classList.add('show');onMount&&onMount(sh)}

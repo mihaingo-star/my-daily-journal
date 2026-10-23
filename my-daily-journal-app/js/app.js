@@ -6,7 +6,7 @@ function render(keepScroll){route();const y=window.scrollY;let html='';
   switch(ROUTE){case'week':html=pWeek();break;case'today':html=pToday();break;case'cal':html=pCal();break;case'sem':html=pSem();break;case'wrapped':html=pWrapped();break;case'kcal':html=pKcal();break;
     case'groc':html=ARGS[0]==='checkout'?pCheckout():ARGS[0]==='r'?pReceipt(ARGS[1],ARGS[2]==='print'):pGroc(ARGS[0]);break;
     case'binder':html=pBinder();break;case'mod':html=pMod(ARGS[0]);break;case'dump':html=pDump();break;case'focus':html=pFocus();break;case'stickers':html=pStickers();break;case'settings':html=pSettings();break;case'trash':html=pTrash();break;default:ROUTE='home';html=pHome()}
-  $('#app').innerHTML=html+(ROUTE==='home'?'':barHtml(ROUTE));
+  $('#app').dataset.route=ROUTE;$('#app').innerHTML=html+(ROUTE==='home'?'':barHtml(ROUTE));
   if(keepScroll)window.scrollTo(0,y);else window.scrollTo(0,0);
   mount();}
 function rerender(){render(true)}
@@ -18,6 +18,7 @@ function mount(){bindSwipes();
   if(ROUTE==='focus')focusTick();
   const lnf=$('#ln-f');if(lnf)lnf.onchange=attachFile;
   const imp=$('#importIn');if(imp)imp.onchange=importBackup;
+  $$('[data-cover]').forEach(i=>i.onchange=setCover);
 }
 window.addEventListener('hashchange',()=>{window._weekScrolled=false;closeSheet();render()});
 
@@ -114,13 +115,23 @@ const ACT={
   faceTog:()=>faceToggle(),
   lockAfter:(el,d)=>{S.lock.after=+d.v;save();rerender()},
   remTog:(el,d)=>{S.rem[d.k]=!S.rem[d.k];save();rerender()},
-  notifAsk:async()=>{if(!('Notification'in window))return toast('Notifications are not supported here');const p=await Notification.requestPermission();rerender();if(p==='granted')notify('Reminders are on ♡','You will get your morning to-do and deadline reminders.')},
-  notifTest:()=>notify('MY DAILY JOURNAL','This is how your reminders will look ♡'),
+  notifOn:async()=>{if('Notification'in window&&Notification.permission==='denied'){return sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Allow</em> reminders</div></div><p class="hint" style="font-size:1.05rem">Notifications are blocked for this app.<br><br><b>iPhone / iPad:</b> Settings → Notifications → My Journal → Allow Notifications.<br><b>Android:</b> long-press the app icon → App info → Notifications.<br><b>Computer:</b> click the lock icon next to the address → Notifications → Allow.</p><button class="btn d full" data-act="closeSheet">OK</button></div>`)}
+    const r=await enableNotifications();rerender();toast(r.msg);if(r.ok)setTimeout(()=>notify('Reminders are on ♡','You will get your morning to-do and your deadlines.'),400)},
+  notifOff:async()=>{await disableNotifications();rerender();toast('Reminders turned off on this device')},
+  syncOn:()=>syncSheet(),
+  syncGo:async(el,d)=>{const c=$('#sy-code')?.value||window._syCode||'';if(c.trim().length<6)return toast('Use at least 6 characters');window._syCode=c;el.disabled=true;el.textContent='Checking…';
+    try{const p=await syncProbe(c);if(p.exists&&!d.choice){return syncSheet(c,p)}const had=await syncEnable(c,d.choice||'');closeSheet();window._syCode=null;rerender();toast(had&&d.choice!=='upload'?'Synced ✓ — your journal is on this device':'Sync is on ✓')}
+    catch(e){el.disabled=false;el.textContent='Try again';toast(e.message||'Could not turn on sync')}},
+  syncNow:async()=>{await syncPull();await syncPush(true);rerender();toast(SYNC.status==='ok'?'Synced ✓':'Offline — will sync later')},
+  syncOff:()=>{if(!confirm('Turn off sync on this device? Your data stays here and in the cloud.'))return;syncDisable();rerender();toast('Sync turned off on this device')},
+  notifTest:()=>{if(!remindersOn())return toast('Turn notifications on first');notify(`${S.prof.t1} ${S.prof.t2} ${S.prof.t3}`,'This is how your reminders will look ♡')},
   backup:()=>{const blob=new Blob([JSON.stringify(S,null,1)],{type:'application/json'}),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='my-daily-journal-'+TK()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1500);toast('Backup downloaded')},
   snaps:async()=>{const ks=(await idbKeys('snaps')).sort().reverse();sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Automatic</em> copies</div></div><div class="hint" style="margin:6px 0 10px">One copy is kept per day, for 7 days.</div>${ks.map(k=>`<div class="li"><span class="tx">${fmtDay(parseKey(k))}</span><button class="btn sm" data-act="snapRestore" data-k="${k}">Restore</button></div>`).join('')||'<div class="hint">No copy yet.</div>'}<button class="btn full" style="margin-top:12px" data-act="closeSheet">Close</button></div>`)},
   snapRestore:async(el,d)=>{if(!confirm('Go back to the copy of '+d.k+'? Your current data will be replaced (a backup file is downloaded first).'))return;ACT.backup();const s=await idbGet('snaps',d.k);if(s){S=s;load2();save(true);closeSheet();applyTheme();render();toast('Restored ✓')}},
   restore:(el,d)=>restore(d.id),
   purge:(el,d)=>{S.trash=S.trash.filter(t=>t.id!==d.id);save();rerender()},
+  profReset:()=>{if(!confirm('Put back the original texts?'))return;S.prof=blank().prof;save();rerender()},
+  coverReset:(el,d)=>{if(S.modCfg[d.mod])delete S.modCfg[d.mod].cover;applyModCfg();save();rerender()},
   purgeAll:()=>{if(!confirm('Delete everything in the trash for good?'))return;S.trash=[];save();rerender()},
 };
 function kStep(d,s){const k=S.ui.kcalKey||TK(),D=calDay(k),f=S.foods.find(x=>x.id===d.id);let g=(+D.q[f.id]||0)+s*(+f.step||1);g=Math.max(0,Math.round(g*10)/10);if(g)D.q[f.id]=g;else delete D.q[f.id];if(s>0)markActive();save();if(d.sh){foodSheet($('#fsearch')?.value||'')}rerender()}
@@ -142,12 +153,19 @@ document.addEventListener('input',e=>{const el=e.target,f=el.dataset.in;if(!f)re
     case'testN':S.mods[d.mod].tests[+d.j].name=v;break;case'testS':S.mods[d.mod].tests[+d.j].score=v===''?'':clamp(num(v),0,100);break;case'testW':S.mods[d.mod].tests[+d.j].weight=num(v);break;case'examW':S.mods[d.mod].examW=num(v);break;
     case'dumpT':S.dump[+d.j].t=v;break;
     case'remTime':S.rem[d.k]=v;break;
+    case'prof':S.prof[d.k]=v;break;
+    case'sem':S.sem[d.k]=d.k==='start'?v:Math.max(0,Math.round(num(v)));break;
+    case'modName':(S.modCfg[d.mod]=S.modCfg[d.mod]||{}).name=v.trim();applyModCfg();break;
+    case'modShort':(S.modCfg[d.mod]=S.modCfg[d.mod]||{}).short=v.trim();applyModCfg();break;
+    case'waterGoal':S.waterGoal=clamp(Math.round(num(v))||8,1,20);break;
   }
   save();
 });
 // re-render (keep focus) for fields whose totals depend on them
 document.addEventListener('change',e=>{const el=e.target,f=el.dataset.in;
   if(f==='wkSel'){S.ui.week=+el.value;save();render();return}
+  if(f==='sem'){if(S.sem.start&&!isNaN(parseKey(S.sem.start))){buildBlocks();S.ui.week=null;save();rerender()}return}
+  if(['prof','modName','modShort','waterGoal'].includes(f)){applyModCfg();rerender();const ib=$('#intro .bk');return}
   if(['calGoal','kq','gBudget','gPrice','testS','testW','examW','fk'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
 document.addEventListener('keydown',e=>{const el=e.target;
   if(e.key==='Enter'&&el.dataset.add){const v=el.value.trim();if(!v)return;dayData(el.dataset.add).tasks.push({id:uid(),t:v,d:false});save();rerender();const n=$(`[data-add="${el.dataset.add}"]`);n&&n.focus()}
@@ -155,7 +173,8 @@ document.addEventListener('keydown',e=>{const el=e.target;
   if(e.key==='Enter'&&el.id==='dump-in')ACT.dumpAdd();
   if(e.key==='Enter'&&(el.id==='gi-n'||el.id==='gi-p'||el.id==='gi-q'))grocAdd();
   if(e.key==='Enter'&&el.id==='mi-t')$('[data-act=modAdd]')?.click();
-  if(e.key==='Enter'&&el.id==='nt-t')ACT.taskSave();});
+  if(e.key==='Enter'&&el.id==='nt-t')ACT.taskSave();
+  if(e.key==='Enter'&&el.id==='sy-code')$('[data-act=syncGo]')?.click();});
 
 /* ---------- groceries helpers ---------- */
 function bindGrocAdd(){const n=$('#gi-n'),p=$('#gi-p'),q=$('#gi-q'),b=$('[data-act=gAdd]'),h=$('#gi-h');if(!n)return;
@@ -224,7 +243,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{appl
 async function hash(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 let lockedAt=null;
 function showLock(mode='unlock',onDone){let entry='',first=null;const L=$('#lock');L.classList.remove('hide');
-  const draw=(msg)=>{L.innerHTML=`<div style="width:64px;height:50px;color:var(--rd)">${BOW}</div><h2>MY <em>Daily</em> JOURNAL</h2><div class="k">${msg}</div><div class="pdots">${[0,1,2,3].map(i=>`<i class="${i<entry.length?'f':''}"></i>`).join('')}</div><div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="t" data-n="face">${mode==='unlock'&&S.lock.faceId?'Face ID':mode!=='unlock'?'cancel':''}</button><button data-n="0">0</button><button class="t" data-n="del">⌫</button></div>`;
+  const draw=(msg)=>{L.innerHTML=`<div style="width:64px;height:50px;color:var(--rd)">${BOW}</div><h2>${esc(S.prof.t1)} <em>${esc(S.prof.t2)}</em> ${esc(S.prof.t3)}</h2><div class="k">${msg}</div><div class="pdots">${[0,1,2,3].map(i=>`<i class="${i<entry.length?'f':''}"></i>`).join('')}</div><div class="pad">${[1,2,3,4,5,6,7,8,9].map(n=>`<button data-n="${n}">${n}</button>`).join('')}<button class="t" data-n="face">${mode==='unlock'&&S.lock.faceId?'Face ID':mode!=='unlock'?'cancel':''}</button><button data-n="0">0</button><button class="t" data-n="del">⌫</button></div>`;
     L.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>press(b.dataset.n))};
   const msgs={unlock:'Enter your PIN',set:'Choose a 4-digit PIN',confirm:'Confirm your PIN'};let m='unlock'===mode?'unlock':'set';draw(msgs[m]);
   async function press(n){if(n==='del'){entry=entry.slice(0,-1);return draw(msgs[m])}if(n==='face'){if(mode!=='unlock'){L.classList.add('hide');return}return faceUnlock()}if(entry.length>=4)return;entry+=n;draw(msgs[m]);
@@ -241,14 +260,14 @@ async function faceUnlock(){try{const id=Uint8Array.from(atob(S.lock.faceId),c=>
 document.addEventListener('visibilitychange',()=>{if(!S.lock.pin)return;if(document.hidden){lockedAt=Date.now()}else if(lockedAt&&Date.now()-lockedAt>=S.lock.after*60000){showLock('unlock')}});
 
 /* ---------- notifications ---------- */
-async function notify(title,body){if(!('Notification'in window)||Notification.permission!=='granted')return toast(title+' — '+body);try{const reg=await navigator.serviceWorker?.getRegistration();if(reg)return reg.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:title});new Notification(title,{body,icon:'icon-192.png'})}catch(e){toast(title)}}
-function checkReminders(){if(!('Notification'in window)||Notification.permission!=='granted')return;const R=S.rem,n=new Date(),hm=pad(n.getHours())+':'+pad(n.getMinutes()),k=TK(),sent=S.sent;const once=(id,t,b)=>{if(sent[id])return;sent[id]=1;notify(t,b);save()};
+async function notify(title,body){if(!('Notification'in window)||Notification.permission!=='granted')return toast(title+' — '+body);try{const reg=navigator.serviceWorker?await Promise.race([navigator.serviceWorker.ready,new Promise(r=>setTimeout(()=>r(null),3000))]):null;if(reg&&reg.active)return await reg.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:title});new Notification(title,{body,icon:'icon-192.png'})}catch(e){toast(title)}}
+function checkReminders(){if(!remindersOn()||serverPushActive())return;const R=S.rem,n=new Date(),hm=pad(n.getHours())+':'+pad(n.getMinutes()),k=TK(),sent=S.sent;const once=(id,t,b)=>{if(sent[id])return;sent[id]=1;notify(t,b);save()};
   if(R.morning&&hm>=R.mtime){const its=datedItems(k).filter(x=>!x.d);once('m'+k,'Good morning ☀',its.length?`${its.length} thing${its.length>1?'s':''} today: ${its.slice(0,3).map(x=>x.t).join(' · ')}`:'Nothing planned today — enjoy ♡')}
   if(R.dayBefore&&hm>=R.dtime){const t=key(addDays(today(),1));const due=datedItems(t).filter(x=>x.mod&&!x.d);if(due.length)once('d'+t,'Due tomorrow',due.map(x=>x.t).join(' · '))}
   if(R.three&&hm>=R.dtime){const t=key(addDays(today(),3));const due=datedItems(t).filter(x=>x.mod&&!x.d);if(due.length)once('t'+t,'Due in 3 days',due.map(x=>x.t).join(' · '))}
   if(R.streak&&hm>='21:00'&&!S.active[k]&&streak()>0)once('s'+k,`Keep your ${streak()}-day streak 🎀`,'Tick one thing in your planner today.');
   if(R.groc&&n.getDay()===6&&hm>='09:00'&&S.groc.items.length)once('g'+k,'Groceries day 🛒',`${S.groc.items.length} items on your list · budget ${rs(S.groc.budget)}`);
-  if(R.water&&n.getHours()>=9&&n.getHours()<=21&&n.getHours()%2===1&&n.getMinutes()<5)once('w'+k+n.getHours(),'Water time 💧',`${S.cal[k]?.water||0}/8 glasses so far`);
+  if(R.water&&n.getHours()>=9&&n.getHours()<=21&&n.getHours()%2===1&&n.getMinutes()<5)once('w'+k+n.getHours(),'Water time 💧',`${S.cal[k]?.water||0}/${S.waterGoal} glasses so far`);
   const cut=key(addDays(today(),-10));for(const x in sent)if(x.slice(1,11)<cut)delete sent[x]}
 
 /* ---------- PDF export (print) ---------- */
@@ -258,8 +277,17 @@ function printWeek(){const B=BLOCKS[S.ui.week??nowBlock()];const W=wk(B.id);
   <div class="pday"><h4>Tasks of the week</h4>${W.goals.filter(g=>g.t).map(g=>`<div>${g.d?'☑':'☐'} ${esc(g.t)}</div>`).join('')}<h4 style="margin-top:8px">Notes</h4><div>${esc(W.notes)}</div></div></div></div>`;window.print()}
 function printMonth(){const t=today();const[y,m]=S.ui.cal||[t.getFullYear(),t.getMonth()];const first=new Date(y,m,1),last=new Date(y,m+1,0);let d=addDays(first,-dow(first)),cells='';
   while(d<=last){for(let i=0;i<7;i++){const k=key(d);cells+=`<div class="pc" style="${d.getMonth()!==m?'opacity:.35':''}"><b>${d.getDate()}</b>${datedItems(k).slice(0,5).map(x=>`<div>• ${esc(x.t)}</div>`).join('')}</div>`;d=addDays(d,1)}}
-  $('#print').innerHTML=`<div class="pp"><h1>${MONTHS[m]} ${y}</h1><div class="sub2">My Daily Journal · Year 3 Semester 2</div><div class="pmonth">${DAYS3.map(x=>`<div class="ph2">${x.toUpperCase()}</div>`).join('')}${cells}</div></div>`;window.print()}
+  $('#print').innerHTML=`<div class="pp"><h1>${MONTHS[m]} ${y}</h1><div class="sub2">${esc(S.prof.t1+' '+S.prof.t2+' '+S.prof.t3)} · ${esc(S.prof.label)}</div><div class="pmonth">${DAYS3.map(x=>`<div class="ph2">${x.toUpperCase()}</div>`).join('')}${cells}</div></div>`;window.print()}
 
+/* ---------- sync sheet ---------- */
+function syncSheet(code,probe){if(!API)return toast('Sync works once the app is published online.');
+  if(probe){const when=probe.at?fmtDay(new Date(probe.at)):'';return sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Journal</em> found</div></div><p class="hint" style="font-size:1.05rem">A journal with this code is already in the cloud${when?' (last saved '+when+')':''}.</p><div class="btns" style="margin:12px 0 0;flex-direction:column"><button class="btn d" data-act="syncGo" data-choice="use">Use it on this device</button><button class="btn" data-act="syncGo" data-choice="upload">Replace it with this device's data</button><button class="btn" data-act="closeSheet">Cancel</button></div></div>`)}
+  sheet(`<div style="padding:0 16px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Turn on</em> sync</div></div>
+  <p class="hint" style="font-size:1.02rem">Choose a personal code (at least 6 characters). Type the <b>same code</b> on your phone, iPad and computer — that's all. Your data is encrypted with this code before it leaves the device, so keep it safe: it cannot be recovered.</p>
+  <div class="field"><label>Personal code</label><input id="sy-code" type="password" autocomplete="new-password" placeholder="e.g. a word + numbers" value="${esc(code||'')}"></div>
+  <div class="btns" style="margin:14px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="syncGo">Continue</button></div></div>`,sh=>setTimeout(()=>sh.querySelector('#sy-code')?.focus(),300))}
+/* ---------- custom covers ---------- */
+function setCover(e){const f=e.target.files[0],id=e.target.dataset.cover;if(!f)return;const img=new Image(),u=URL.createObjectURL(f);img.onload=()=>{const W=360,h=Math.round(img.height*W/img.width),c=document.createElement('canvas');c.width=W;c.height=h;c.getContext('2d').drawImage(img,0,0,W,h);let d=c.toDataURL('image/webp',.82);if(d.length<20||!d.startsWith('data:image/webp'))d=c.toDataURL('image/jpeg',.85);(S.modCfg[id]=S.modCfg[id]||{}).cover=d;URL.revokeObjectURL(u);applyModCfg();save();rerender();toast('Cover updated ✓')};img.onerror=()=>toast('This image could not be read');img.src=u}
 /* ---------- files & import ---------- */
 async function attachFile(e){const f=e.target.files[0];if(!f)return;if(f.size>25*1024*1024)return toast('File too big (max 25 MB)');const id='file'+uid();await idbPut('files',id,{name:f.name,blob:f});const mod=e.target.dataset.mod;S.mods[mod].links.push({id:uid(),label:f.name.replace(/\.[^.]+$/,'').slice(0,28),file:id});save();rerender();toast('File attached on this device')}
 function importBackup(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!d.v)throw 0;if(!confirm('Replace your current data with this backup?'))return;S=d;load2();save(true);applyTheme();render();toast('Backup imported ✓')}catch(err){toast('This file is not a My Daily Journal backup')}};r.readAsText(f)}
@@ -268,8 +296,11 @@ function importBackup(e){const f=e.target.files[0];if(!f)return;const r=new File
 async function boot(){load();await recoverIfEmpty();applyTheme();
   try{navigator.storage?.persist?.()}catch(e){}
   if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  saveListeners.push(onLocalSave);
+  navigator.serviceWorker?.addEventListener?.('message',ev=>{if(ev.data==='resubscribe'&&Notification.permission==='granted')enableNotifications()});
   render();save();
-  const intro=$('#intro');if(S.set.intro&&!sessionStorage.getItem('mdj-intro')){sessionStorage.setItem('mdj-intro','1');intro.classList.remove('hide');setTimeout(()=>{intro.classList.add('out');setTimeout(()=>intro.classList.add('hide'),450)},1500)}else intro.classList.add('hide');
+  syncInit();pushInit();pushServer();
+  const intro=$('#intro');const ic=$('#intro .cover>div');if(ic)ic.innerHTML=`<div style="font:500 .5rem Jost;letter-spacing:.2em;text-transform:uppercase">${esc(S.prof.label)}</div><div style="font:500 1.6rem/1 'Bodoni Moda';margin-top:6px">${esc(S.prof.t1)} <span style="font:400 2.1rem 'Pinyon Script';color:#A44C61">${esc(S.prof.t2)}</span><br>${esc(S.prof.t3)}</div>`;if(S.set.intro&&!sessionStorage.getItem('mdj-intro')){sessionStorage.setItem('mdj-intro','1');intro.classList.remove('hide');setTimeout(()=>{intro.classList.add('out');setTimeout(()=>intro.classList.add('hide'),450)},1500)}else intro.classList.add('hide');
   if(S.lock.pin)showLock('unlock');
   checkStickers();checkReminders();setInterval(checkReminders,60000);focusTick();
   setInterval(()=>{if(ROUTE==='today'&&!document.hidden)rerender()},60000)}
