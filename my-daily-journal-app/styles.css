@@ -483,8 +483,8 @@ textarea.lined{width:100%;resize:vertical;min-height:80px;background-image:repea
   #app[data-route=groc] .page>.gtot,#app[data-route=groc] .page>.budrow,#app[data-route=groc] .page>.warn,#app[data-route=groc] .page>.okbar,#app[data-route=groc] .page>.btns,#app[data-route=groc] .page>.hint{grid-column:8/13}
   #app[data-route=groc] #glist{grid-column:1/8;grid-row:4/span 12;align-self:start}
   #app[data-route=mod] .page{grid-auto-flow:row dense}
-  #app[data-route=mod] .c-list,#app[data-route=mod] .c-seclinks{grid-column:1/8;align-self:start}
-  #app[data-route=mod] .c-links,#app[data-route=mod] .c-grades{grid-column:8/13;align-self:start}
+  #app[data-route=mod] .c-list{grid-column:1/8;align-self:start}
+  #app[data-route=mod] .c-grades{grid-column:8/13;align-self:start}
   #app[data-route=kcal] .c-ring{grid-column:1/6}
   #app[data-route=kcal] .c-water{grid-column:1/6}
   #app[data-route=kcal] .c-eaten{grid-column:6/13;grid-row:2/span 3;align-self:start}
@@ -541,3 +541,15 @@ textarea.lined{width:100%;resize:vertical;min-height:80px;background-image:repea
 /* text size (Settings → Text size) */
 #app,#sheet,#toast,#login .lg{zoom:var(--zoom,1)}
 #app .bar{zoom:var(--unzoom,1)}
+
+/* links & files blocks in a notebook */
+.lblock{margin-top:14px}
+.lblock.gen{padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:var(--card)}
+.lblock.sec{padding-top:12px;border-top:1px dashed var(--line)}
+.lblock .lh{font:600 .55rem var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.lblock .links{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.lchip{display:inline-flex;align-items:center;gap:2px;border-radius:999px;background:var(--blush);padding:0 4px 0 0}
+.lchip a{display:inline-flex;align-items:center;gap:6px;padding:7px 4px 7px 12px;color:var(--rd);font:600 .58rem var(--sans);letter-spacing:.14em;text-transform:uppercase;text-decoration:none;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lchip .x{font-size:.7rem;opacity:.6;padding:4px}
+.ladd{display:flex;gap:6px;flex-wrap:wrap}
+.dadd{display:inline-flex;align-items:center;gap:4px;padding:7px 12px;border-radius:999px;border:1px dashed var(--rd);color:var(--rd);font:600 .55rem var(--sans);letter-spacing:.14em;text-transform:uppercase;background:none;cursor:pointer}
