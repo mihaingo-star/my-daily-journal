@@ -7,12 +7,12 @@ Personal planner web app: week planner, today view, calendar, semester + Wrapped
 - `functions/api/` → Cloudflare Pages Functions (sync + reminders registration), deployed automatically
 - `worker/cron-worker.js` → paste into a separate Cloudflare Worker (sends reminders every 5 minutes)
 
-## Cloudflare setup (once)
-1. KV: Workers & Pages → KV (Storage & Databases) → Create namespace `mdj-data`.
-2. Pages project → Settings → Bindings → Add → KV namespace → Variable name `MDJ` → namespace `mdj-data` → Save → redeploy.
-3. Worker: Workers & Pages → Create → Worker → name `mdj-reminders` → Deploy → Edit code → paste `worker/cron-worker.js` → Deploy.
-4. Worker → Settings → Bindings → Add → KV namespace → `MDJ` → `mdj-data`.
-5. Worker → Settings → Triggers → Cron Triggers → Add → `*/5 * * * *`.
+## Cloudflare setup (Worker, once)
+The whole app runs as one Cloudflare Worker (`src/index.js`): the app files, sync (`/api/sync`), reminders (`/api/push`) and a cron every 5 minutes that sends the reminders.
+1. Storage & Databases → Workers KV → Create → `mdj-data` → copy its ID.
+2. In `wrangler.jsonc`: put your Worker's name in `name` and the KV ID in `id`.
+3. Push to GitHub: Cloudflare rebuilds and deploys (deploy command `npx wrangler deploy`).
+4. Check `https://<your-site>/api/push` shows `{"key":…}` and `/api/run` shows `{"sent":…}`.
 
 ## Data
 Everything saves automatically on each device (and 7 daily automatic copies). With sync on, it is also stored encrypted on your Cloudflare account; only someone with your personal code can read it. Deleted items go to the Trash for 30 days. Attached files (PDFs) stay on the device where they were added.
