@@ -482,8 +482,9 @@ textarea.lined{width:100%;resize:vertical;min-height:80px;background-image:repea
   #app[data-route=groc] .page{grid-auto-flow:row dense}
   #app[data-route=groc] .page>.gtot,#app[data-route=groc] .page>.budrow,#app[data-route=groc] .page>.warn,#app[data-route=groc] .page>.okbar,#app[data-route=groc] .page>.btns,#app[data-route=groc] .page>.hint{grid-column:8/13}
   #app[data-route=groc] #glist{grid-column:1/8;grid-row:4/span 12;align-self:start}
-  #app[data-route=mod] .c-list{grid-column:1/8;grid-row:span 2;align-self:start}
-  #app[data-route=mod] .c-links,#app[data-route=mod] .c-grades{grid-column:8/13}
+  #app[data-route=mod] .page{grid-auto-flow:row dense}
+  #app[data-route=mod] .c-list,#app[data-route=mod] .c-seclinks{grid-column:1/8;align-self:start}
+  #app[data-route=mod] .c-links,#app[data-route=mod] .c-grades{grid-column:8/13;align-self:start}
   #app[data-route=kcal] .c-ring{grid-column:1/6}
   #app[data-route=kcal] .c-water{grid-column:1/6}
   #app[data-route=kcal] .c-eaten{grid-column:6/13;grid-row:2/span 3;align-self:start}

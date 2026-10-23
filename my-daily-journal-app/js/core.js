@@ -120,6 +120,7 @@ async function snapshot(){const k=TK();if(lastSnap===k)return;lastSnap=k;await i
 async function recoverIfEmpty(){ // if localStorage was wiped but IndexedDB still has data
   if(localStorage.getItem(KEY))return false;const st=await idbGet('state','current');if(st&&st.v){S=st;load2();return true}return false}
 function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k];for(const g of['set','rem','prof','sem','cfg','pin'])for(const k in b[g])if(S[g][k]===undefined)S[g][k]=b[g][k];afterLoad()}
+function linkArr(mod,w){const M=S.mods[mod];if(!w||w==='gen')return M.links;M.sec=M.sec||{};return M.sec[w]=M.sec[w]||[]}
 function afterLoad(){if(!noHist){UNDO=[];REDO=[]}if(S.lock&&S.lock.pin&&!(S.pin&&S.pin.pin)){S.pin={pin:S.lock.pin,salt:S.lock.salt,after:S.lock.after||1}}if(S.lock){delete S.lock.pin;delete S.lock.salt;delete S.lock.after}buildBlocks();applyModCfg();lastBody=contentOf()}
 
 /* ---------- activity / streak ---------- */
@@ -138,7 +139,7 @@ function restore(id){const i=S.trash.findIndex(t=>t.id===id);if(i<0)return;const
     case'receipt':ins(S.groc.receipts,d.idx,d.r);break;
     case'dump':ins(S.dump,d.idx,d.n);break;
     case'mod':ins(S.mods[d.mod][d.list],d.idx,d.item);break;
-    case'link':ins(S.mods[d.mod].links,d.idx,d.link);break;
+    case'link':ins(linkArr(d.mod,d.w),d.idx,d.link);break;
     case'test':ins(S.mods[d.mod].tests,d.idx,d.test);break;
     case'food':ins(S.foods,d.idx,d.food);break;
     case'extra':ins(calDay(d.k).extra,d.idx,d.x);break;

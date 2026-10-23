@@ -160,7 +160,7 @@ function syncStart(){if(syncStarted)return;syncStarted=true;
 
 /* ---------------- attached files (encrypted, synced) ---------------- */
 const MAX_FILE=15*1024*1024;
-function allFileIds(){const ids=[];for(const m in S.mods||{})for(const l of (S.mods[m].links||[]))if(l.file)ids.push(l.file);return ids}
+function allFileIds(){const ids=[];for(const m in S.mods||{}){const M=S.mods[m];for(const arr of [M.links||[],...Object.values(M.sec||{})])for(const l of arr)if(l&&l.file)ids.push(l.file)}return ids}
 function pendingFiles(v){try{if(v)localStorage.setItem('mdj-fileq',JSON.stringify(v));return JSON.parse(localStorage.getItem('mdj-fileq')||'[]')}catch(e){return[]}}
 function markFilePending(id){const q=pendingFiles();if(!q.includes(id)){q.push(id);pendingFiles(q)}}
 function markAllFilesPending(){pendingFiles([...new Set([...pendingFiles(),...allFileIds()])])}

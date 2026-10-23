@@ -1,5 +1,5 @@
 /* My Daily Journal — offline cache + push reminders */
-const CACHE='mdj-v6-0';
+const CACHE='mdj-v6-1';
 const SHELL=['./','index.html','styles.css','js/core.js','js/sync.js','js/pages.js','js/app.js','manifest.webmanifest','icon-192.png','icon-512.png','apple-touch-icon.png',
  'assets/gedm.webp','assets/shrm.webp','assets/hris.webp','assets/km.webp','assets/diss.webp','assets/dump.webp'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});

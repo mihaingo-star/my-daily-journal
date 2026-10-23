@@ -16,7 +16,7 @@ function mount(){bindSwipes();
   if(ROUTE==='groc'&&ARGS[0]==='checkout')bindCheckout();
   if(ROUTE==='groc'&&ARGS[0]==='r'&&ARGS[2]==='print'){const p=$('#printing');if(p)setTimeout(()=>{p.classList.add('tear');history.replaceState(null,'','#groc/r/'+ARGS[1]);setTimeout(()=>{if(ROUTE==='groc')rerender()},650)},2700)}
   if(ROUTE==='focus')focusTick();
-  const lnf=$('#ln-f');if(lnf)lnf.onchange=attachFile;
+  $$('.ln-f').forEach(x=>x.onchange=attachFile);
   const imp=$('#importIn');if(imp)imp.onchange=importBackup;
   $$('[data-cover]').forEach(i=>i.onchange=setCover);
 }
@@ -86,8 +86,8 @@ const ACT={
   modTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.d=!x.d;if(x.d)markActive();save();checkStickers();rerender()},
   modSt:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const n=statusOf(d.l==='tuto'&&d.mod==='diss'?'tuto_diss':d.l).length;x.st=((x.st||0)+1)%n;if(x.st)markActive();save();checkStickers();rerender()},
   modAdd:(el,d)=>{const t=$('#mi-t').value.trim();if(!t)return toast('Write something first');const date=$('#mi-d').value||'';S.mods[d.mod][d.l].push({id:uid(),t,date,d:false,st:0});save();rerender();toast(date?'Added · also in your calendar':'Added');setTimeout(()=>$('#mi-t')?.focus(),30)},
-  linkAdd:(el,d)=>{const l=$('#ln-l').value.trim(),u=$('#ln-u').value.trim();if(!u)return toast('Paste a link first');S.mods[d.mod].links.push({id:uid(),label:l||u.replace(/^https?:\/\//,'').slice(0,24),url:/^https?:/.test(u)?u:'https://'+u});save();rerender()},
-  linkDel:(el,d)=>{const arr=S.mods[d.mod].links,j=+d.j,L=arr.splice(j,1)[0];trash('link',L.label,{mod:d.mod,link:L,idx:j});rerender()},
+  linkAdd:(el,d)=>{const w=d.w||'gen',l=$('#ln-l-'+w).value.trim(),u=$('#ln-u-'+w).value.trim();if(!u)return toast('Paste a link first');linkArr(d.mod,w).push({id:uid(),label:l||u.replace(/^https?:\/\//,'').slice(0,24),url:/^https?:/.test(u)?u:'https://'+u});save();rerender()},
+  linkDel:(el,d)=>{const w=d.w||'gen',arr=linkArr(d.mod,w),j=+d.j,L=arr.splice(j,1)[0];trash('link',L.label,{mod:d.mod,w,link:L,idx:j});rerender()},
   openFile:async(el,d)=>{let f=await idbGet('files',d.f);
     if(!f){if(!SYNC.conf)return toast('File not found on this device');toast('Downloading…');try{f=await downloadFile(d.f)}catch(e){return toast(e.message||'Could not download the file')}}
     const url=URL.createObjectURL(f.blob);sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t" style="font-size:1.3rem">${esc(f.name||'File')}</div></div><a class="btn d full" href="${url}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px">Open</a><a class="btn full" href="${url}" download="${esc(f.name||'file')}" style="display:block;text-align:center;margin-top:8px">Save a copy</a></div>`)},
@@ -363,7 +363,7 @@ function showLogin(preUser,msg,mode){if(!API||SYNC.conf)return;const L=$('#login
 /* ---------- custom covers ---------- */
 function setCover(e){const f=e.target.files[0],id=e.target.dataset.cover;if(!f)return;const img=new Image(),u=URL.createObjectURL(f);img.onload=()=>{const W=360,h=Math.round(img.height*W/img.width),c=document.createElement('canvas');c.width=W;c.height=h;c.getContext('2d').drawImage(img,0,0,W,h);let d=c.toDataURL('image/webp',.82);if(d.length<20||!d.startsWith('data:image/webp'))d=c.toDataURL('image/jpeg',.85);(S.modCfg[id]=S.modCfg[id]||{}).cover=d;URL.revokeObjectURL(u);applyModCfg();save();rerender();toast('Cover updated ✓')};img.onerror=()=>toast('This image could not be read');img.src=u}
 /* ---------- files & import ---------- */
-async function attachFile(e){const f=e.target.files[0];if(!f)return;if(f.size>MAX_FILE)return toast('File too big (max 15 MB)');const id='file'+uid();await idbPut('files',id,{name:f.name,blob:f});const mod=e.target.dataset.mod;S.mods[mod].links.push({id:uid(),label:f.name.replace(/\.[^.]+$/,'').slice(0,28),file:id});save();rerender();if(SYNC.conf){markFilePending(id);uploadPendingFiles();toast('File attached ✓ — it will be on all your devices')}else toast('File attached on this device')}
+async function attachFile(e){const f=e.target.files[0];if(!f)return;if(f.size>MAX_FILE)return toast('File too big (max 15 MB)');const id='file'+uid();await idbPut('files',id,{name:f.name,blob:f});const mod=e.target.dataset.mod;linkArr(mod,e.target.dataset.w||'gen').push({id:uid(),label:f.name.replace(/\.[^.]+$/,'').slice(0,28),file:id});save();rerender();if(SYNC.conf){markFilePending(id);uploadPendingFiles();toast('File attached ✓ — it will be on all your devices')}else toast('File attached on this device')}
 function importBackup(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!d.v)throw 0;if(!confirm('Replace your current data with this backup?'))return;S=d;load2();save(true);applyTheme();render();toast('Backup imported ✓')}catch(err){toast('This file is not a My Daily Journal backup')}};r.readAsText(f)}
 
 /* ---------- boot ---------- */
