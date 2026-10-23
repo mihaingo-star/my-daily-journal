@@ -1,9 +1,11 @@
 // My Daily Journal — one Worker for everything: the app files, sync, reminders registration and the 5-minute reminder sender.
 import * as sync from '../functions/api/sync.js';
 import * as push from '../functions/api/push.js';
+import * as file from '../functions/api/file.js';
+import * as account from '../functions/api/account.js';
 import reminders from '../worker/cron-worker.js';
 
-const routes = { '/api/sync': sync, '/api/push': push };
+const routes = { '/api/sync': sync, '/api/push': push, '/api/file': file, '/api/account': account };
 
 export default {
   async fetch(request, env, ctx) {

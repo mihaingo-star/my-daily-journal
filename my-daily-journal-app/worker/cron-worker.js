@@ -1,4 +1,4 @@
-// My Daily Journal — reminder sender (Cloudflare Worker with a Cron Trigger "*/5 * * * *")
+// My Daily Journal — reminder sender (runs every minute from the Cron Trigger "* * * * *")
 // Paste this whole file into a new Worker, bind the same KV namespace as  MDJ , add the cron trigger.
 // Every 5 minutes it sends the reminders that are due to every device that turned notifications on.
 
@@ -50,34 +50,45 @@ export async function sendPush(vapid, sub, msg, subject) {
   });
 }
 
+async function deviceIds(env) {
+  let ids = await env.MDJ.get('alldevs', 'json');
+  if (ids) return ids;
+  ids = []; let cursor; // first run: build the index once
+  do { const page = await env.MDJ.list({ prefix: 'dev:', cursor }); ids.push(...page.keys.map((k) => k.name.slice(4))); cursor = page.list_complete ? null : page.cursor; } while (cursor);
+  await env.MDJ.put('alldevs', JSON.stringify(ids));
+  return ids;
+}
+
 async function run(env) {
   const now = Date.now();
   const vapid = await env.MDJ.get('vapid', 'json');
   const last = +(await env.MDJ.get('cron')) || 0;
   if (now - last > 55 * 60e3) await env.MDJ.put('cron', String(now)); // heartbeat, about once an hour
   if (!vapid) return { sent: 0, note: 'no key yet' };
-  let sent = 0, cursor;
-  do {
-    const page = await env.MDJ.list({ prefix: 'dev:', cursor });
-    for (const k of page.keys) {
-      const d = await env.MDJ.get(k.name, 'json');
-      if (!d || !d.sub) continue;
-      const due = d.queue.filter((q) => q.at <= now && q.at > now - 3 * 3600e3);
-      const later = d.queue.filter((q) => q.at > now);
-      if (!due.length && later.length === d.queue.length) continue;
-      let gone = false;
-      for (const q of due.slice(-4)) {
-        try {
-          const r = await sendPush(vapid, d.sub, { title: q.title, body: q.body, tag: q.tag, url: q.url }, d.site || 'mailto:reminders@example.com');
-          if (r.status === 404 || r.status === 410) { gone = true; break; }
-          if (r.ok) sent++;
-        } catch (e) { /* try again next run */ }
-      }
-      if (gone) await env.MDJ.delete(k.name);
-      else await env.MDJ.put(k.name, JSON.stringify({ ...d, queue: later }));
+  let sent = 0;
+  const ids = await deviceIds(env);
+  const keep = [];
+  for (const id of ids) {
+    const d = await env.MDJ.get('dev:' + id, 'json');
+    if (!d) continue;
+    keep.push(id);
+    if (!d.sub) continue;
+    const queue = d.queue || [], extra = d.extra || [];
+    const due = [...queue, ...extra].filter((q) => q.at <= now && q.at > now - 3 * 3600e3).sort((a, b) => a.at - b.at);
+    const later = queue.filter((q) => q.at > now), laterX = extra.filter((q) => q.at > now);
+    if (!due.length && later.length === queue.length && laterX.length === extra.length) continue;
+    let gone = false;
+    for (const q of due.slice(-4)) {
+      try {
+        const r = await sendPush(vapid, d.sub, { title: q.title, body: q.body, tag: q.tag, url: q.url }, d.site || 'mailto:reminders@example.com');
+        if (r.status === 404 || r.status === 410) { gone = true; break; }
+        if (r.ok) sent++;
+      } catch (e) { /* try again next run */ }
     }
-    cursor = page.list_complete ? null : page.cursor;
-  } while (cursor);
+    if (gone) { await env.MDJ.delete('dev:' + id); keep.pop(); }
+    else await env.MDJ.put('dev:' + id, JSON.stringify({ ...d, queue: later, extra: laterX }));
+  }
+  if (keep.length !== ids.length) await env.MDJ.put('alldevs', JSON.stringify(keep));
   return { sent };
 }
 

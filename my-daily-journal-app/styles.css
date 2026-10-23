@@ -532,3 +532,11 @@ textarea.lined{width:100%;resize:vertical;min-height:80px;background-image:repea
 #login .err{min-height:1.2em;color:var(--rd);font:500 .9rem var(--hand);text-align:center;margin:4px 0 8px}
 #login .skip{display:block;margin:14px auto 0;font:500 .55rem var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--muted);text-decoration:underline}
 @media print{#login{display:none!important}}
+
+/* undo / redo */
+.iconbtn.ur{font:500 1.15rem/1 var(--sans);color:var(--rd)}
+.iconbtn.ur.off{opacity:.3;pointer-events:none}
+
+/* text size (Settings → Text size) */
+#app,#sheet,#toast,#login .lg{zoom:var(--zoom,1)}
+#app .bar{zoom:var(--unzoom,1)}

@@ -69,8 +69,9 @@ const blank=()=>({v:2,days:{},weeks:{},rec:[],recDone:{},recSkip:{},
   groc:{budget:1300,approved:0,items:[],receipts:[],prices:{}},
   focus:{work:25,short:5,long:15,log:[],run:null,mod:'gedm',mode:'work',done:0},
   active:{},best:0,stickers:{},trash:[],sent:{},
-  lock:{pin:null,salt:null,faceId:null,after:1},
-  rem:{morning:true,mtime:'07:30',dayBefore:true,dtime:'19:00',three:true,streak:true,groc:true,water:false},
+  lock:{faceId:null},pin:{pin:null,salt:null,after:1},
+  cfg:{lists:{todo:'To-do',assign:'Assignments',tuto:'Tutorials',lect:'Lectures',chapters:'Chapters'},status:{assign:['to do','in progress','submitted'],lect:['not started','to review','notes done'],tuto_diss:['draft','sent','corrected','final']},grades:{A:70,B:60,C:50,D:40},foodCats:{starch:'Starches',prot:'Protein',veg:'Vegetables',fruit:'Fruit',dairy:'Dairy',fat:'Fats & sugar',other:'Other'}},
+  rem:{morning:true,mtime:'07:30',dayBefore:true,dtime:'19:00',stime:'21:00',gday:6,gtime:'09:00',wfrom:'09:00',wto:'21:00',wevery:2,three:true,streak:true,groc:true,water:false},
   set:{theme:'rose',dark:'auto',swapWeeks:false,testsW:30,intro:true},
   prof:{name:'Mihaingo',hello:'Hello',tagline:'más amor, por favor',label:'Year 3 · Semester 2',big1:'26',big2:'27',spine:'my daily journal',t1:'MY',t2:'Daily',t3:'JOURNAL',footer:'thank you & see you next week ♡',menuTitle:'Menu'},
   sem:{start:'2026-10-19',weeks:15,breakAfter:9,breakLen:3},modCfg:{},waterGoal:8,
@@ -85,7 +86,7 @@ function load(){
   for(const k in b.prof)if(S.prof[k]===undefined)S.prof[k]=b.prof[k];
   for(const k in b.sem)if(S.sem[k]===undefined)S.sem[k]=b.sem[k];
   for(const m of MODS)if(!S.mods[m.id])S.mods[m.id]=b.mods[m.id];
-  const cut=Date.now()-30*864e5;S.trash=S.trash.filter(t=>t.ts>cut);
+  const cut=Date.now()-30*864e5;const gone=S.trash.filter(t=>t.ts<=cut);S.trash=S.trash.filter(t=>t.ts>cut);if(gone.length)setTimeout(()=>{try{forgetFiles(gone)}catch(e){}},5000);
   afterLoad();
 }
 function migrateOld(){
@@ -98,7 +99,14 @@ function migrateOld(){
 }
 let saveT=null,saveListeners=[],lastBody=null;
 function contentOf(){const o={};for(const k in S)if(!['lock','ui','sent','mt'].includes(k))o[k]=S[k];return JSON.stringify(o)}
-function save(now){clearTimeout(saveT);const run=()=>{const b=contentOf(),changed=b!==lastBody;if(changed){S.mt=Date.now();lastBody=b}
+/* undo / redo for every change (typing in a row counts as one step) */
+let UNDO=[],REDO=[],undoAt=0,noHist=false;
+function histPush(prev){const now=Date.now();if(now-undoAt>1500||!UNDO.length){UNDO.push(prev);if(UNDO.length>40)UNDO.shift()}undoAt=now;REDO=[];histUi()}
+function histApply(from,to,label){save(true);if(!from.length)return toast(label==='undo'?'Nothing to undo':'Nothing to redo');to.push(lastBody);const body=from.pop();
+  const keep={};for(const k of['lock','ui','sent','mt'])keep[k]=S[k];S=Object.assign(JSON.parse(body),keep);noHist=true;load2();save(true);noHist=false;undoAt=0;applyTheme&&applyTheme();render(true);histUi();toast(label==='undo'?'Undone ↶':'Redone ↷')}
+const undo=()=>histApply(UNDO,REDO,'undo'),redo=()=>histApply(REDO,UNDO,'redo');
+function histUi(){document.querySelectorAll('[data-act=undo]').forEach(b=>b.classList.toggle('off',!UNDO.length));document.querySelectorAll('[data-act=redo]').forEach(b=>b.classList.toggle('off',!REDO.length))}
+function save(now){clearTimeout(saveT);const run=()=>{const b=contentOf(),changed=b!==lastBody;if(changed){if(!noHist&&lastBody)histPush(lastBody);S.mt=Date.now();lastBody=b}
   try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('Storage is full — export a backup in Settings')}idbPut('state','current',S);snapshot();if(changed)saveListeners.forEach(f=>{try{f()}catch(e){}})};now?run():(saveT=setTimeout(run,120))}
 /* IndexedDB: mirror + daily snapshots + attached files */
 let _db=null;
@@ -111,8 +119,8 @@ let lastSnap=null;
 async function snapshot(){const k=TK();if(lastSnap===k)return;lastSnap=k;await idbPut('snaps',k,JSON.parse(JSON.stringify(S)));const ks=(await idbKeys('snaps')).sort();while(ks.length>7)await idbDel('snaps',ks.shift())}
 async function recoverIfEmpty(){ // if localStorage was wiped but IndexedDB still has data
   if(localStorage.getItem(KEY))return false;const st=await idbGet('state','current');if(st&&st.v){S=st;load2();return true}return false}
-function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k];for(const g of['set','rem','prof','sem'])for(const k in b[g])if(S[g][k]===undefined)S[g][k]=b[g][k];afterLoad()}
-function afterLoad(){buildBlocks();applyModCfg();lastBody=contentOf()}
+function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k];for(const g of['set','rem','prof','sem','cfg','pin'])for(const k in b[g])if(S[g][k]===undefined)S[g][k]=b[g][k];afterLoad()}
+function afterLoad(){if(!noHist){UNDO=[];REDO=[]}if(S.lock&&S.lock.pin&&!(S.pin&&S.pin.pin)){S.pin={pin:S.lock.pin,salt:S.lock.salt,after:S.lock.after||1}}if(S.lock){delete S.lock.pin;delete S.lock.salt;delete S.lock.after}buildBlocks();applyModCfg();lastBody=contentOf()}
 
 /* ---------- activity / streak ---------- */
 function markActive(){const k=TK();if(!S.active[k]){S.active[k]=1;const s=streak();if(s>S.best)S.best=s}}
@@ -156,14 +164,18 @@ function dayKcal(k){const D=S.cal[k];if(!D)return 0;let t=0;for(const f of S.foo
 
 /* ---------- module progress ---------- */
 const LISTS={todo:'To-do',assign:'Assignments',tuto:'Tutorials',lect:'Lectures'};
-const listLabel=(mod,l)=>mod==='diss'&&l==='tuto'?'Chapters':LISTS[l];
+const CFG=()=>S.cfg||{};
+const listLabel=(mod,l)=>(mod==='diss'&&l==='tuto'?(CFG().lists||{}).chapters||'Chapters':(CFG().lists||{})[l]||LISTS[l]);
+const statusOf=k=>{const v=(CFG().status||{})[k];return Array.isArray(v)&&v.length?v:STATUS[k]};
+const foodCats=()=>({...FOOD_CATS,...(CFG().foodCats||{})});
+const gradeMins=()=>{const g=CFG().grades||{};return{A:+g.A||70,B:+g.B||60,C:+g.C||50,D:+g.D||40}};
 const STATUS={assign:['to do','in progress','submitted'],lect:['not started','to review','notes done'],tuto_diss:['draft','sent','corrected','final']};
 function listStats(mod,l){const a=S.mods[mod][l];const n=a.length;let d=0;
   if(l==='assign')d=a.filter(x=>x.st===2).length;else if(l==='lect')d=a.filter(x=>x.st===2).length;else if(l==='tuto'&&mod==='diss')d=a.filter(x=>x.st===3).length;else d=a.filter(x=>x.d).length;return{n,d,p:n?d/n:0}}
 function modProgress(mod){const ls=['todo','assign','tuto','lect'].map(l=>listStats(mod,l)).filter(s=>s.n);return ls.length?ls.reduce((a,s)=>a+s.p,0)/ls.length:0}
 function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tests){tw+=num(t.weight);const out=num(t.out)>0?num(t.out):100;got+=Math.min(num(t.score),out)/out*num(t.weight)}
   const ew=num(M.examW);const need=T=>ew?(T-got)/(ew/100):Infinity;
-  return{got,tw,ew,ok:Math.abs(tw+ew-100)<.01,grades:[['A','70–100',70],['B','60–69',60],['C','50–59',50],['D','40–49',40],['F','< 40',0]].map(([g,r,T])=>({g,r,T,need:g==='F'?null:Math.max(0,Math.ceil(need(T)-1e-9))}))}}
+  return{got,tw,ew,ok:Math.abs(tw+ew-100)<.01,grades:(()=>{const m=gradeMins();return[['A',m.A+'–100',m.A],['B',m.B+'–'+(m.A-1),m.B],['C',m.C+'–'+(m.B-1),m.C],['D',m.D+'–'+(m.C-1),m.D],['F','< '+m.D,0]]})().map(([g,r,T])=>({g,r,T,need:g==='F'?null:Math.max(0,Math.ceil(need(T)-1e-9))}))}}
 
 /* ---------- all dated items (for calendar / today / reminders) ---------- */
 function datedItems(k){
