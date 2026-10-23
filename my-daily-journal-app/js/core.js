@@ -1,5 +1,6 @@
 /* ============ MY DAILY JOURNAL — core (state, storage, helpers) ============ */
 'use strict';
+const APP_VERSION='6.3';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -101,7 +102,7 @@ let saveT=null,saveListeners=[],lastBody=null;
 function contentOf(){const o={};for(const k in S)if(!['lock','ui','sent','mt'].includes(k))o[k]=S[k];return JSON.stringify(o)}
 /* undo / redo for every change (typing in a row counts as one step) */
 let UNDO=[],REDO=[],undoAt=0,noHist=false;
-function histPush(prev){const now=Date.now();if(now-undoAt>1500||!UNDO.length){UNDO.push(prev);if(UNDO.length>40)UNDO.shift()}undoAt=now;REDO=[];histUi()}
+function histPush(prev){const now=Date.now(),ae=document.activeElement,typing=ae&&ae.matches&&ae.matches('input,textarea,[contenteditable="true"]');if(!typing||now-undoAt>1500||!UNDO.length){UNDO.push(prev);if(UNDO.length>40)UNDO.shift()}undoAt=now;REDO=[];histUi()}
 function histApply(from,to,label){save(true);if(!from.length)return toast(label==='undo'?'Nothing to undo':'Nothing to redo');to.push(lastBody);const body=from.pop();
   const keep={};for(const k of['lock','ui','sent','mt'])keep[k]=S[k];S=Object.assign(JSON.parse(body),keep);noHist=true;load2();save(true);noHist=false;undoAt=0;applyTheme&&applyTheme();render(true);histUi();toast(label==='undo'?'Undone ↶':'Redone ↷')}
 const undo=()=>histApply(UNDO,REDO,'undo'),redo=()=>histApply(REDO,UNDO,'redo');

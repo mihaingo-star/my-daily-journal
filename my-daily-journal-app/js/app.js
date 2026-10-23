@@ -86,7 +86,10 @@ const ACT={
   modTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.d=!x.d;if(x.d)markActive();save();checkStickers();rerender()},
   modSt:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const n=statusOf(d.l==='tuto'&&d.mod==='diss'?'tuto_diss':d.l).length;x.st=((x.st||0)+1)%n;if(x.st)markActive();save();checkStickers();rerender()},
   modAdd:(el,d)=>{const t=$('#mi-t').value.trim();if(!t)return toast('Write something first');const date=$('#mi-d').value||'';S.mods[d.mod][d.l].push({id:uid(),t,date,d:false,st:0});save();rerender();toast(date?'Added · also in your calendar':'Added');setTimeout(()=>$('#mi-t')?.focus(),30)},
-  linkAdd:(el,d)=>{const w=d.w||'gen',l=$('#ln-l-'+w).value.trim(),u=$('#ln-u-'+w).value.trim();if(!u)return toast('Paste a link first');linkArr(d.mod,w).push({id:uid(),label:l||u.replace(/^https?:\/\//,'').slice(0,24),url:/^https?:/.test(u)?u:'https://'+u});save();rerender()},
+  linkSheet:(el,d)=>sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Add</em> a link</div></div>
+    <div class="field"><label>Name</label><input id="ln-l" placeholder="e.g. Online class"></div><div class="field" style="margin-top:8px"><label>Link</label><input id="ln-u" placeholder="https://…" inputmode="url" autocapitalize="none"></div>
+    <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="linkAdd" data-mod="${d.mod}" data-w="${d.w}">Add link</button></div></div>`,sh=>setTimeout(()=>sh.querySelector('#ln-l')?.focus(),300)),
+  linkAdd:(el,d)=>{const w=d.w||'gen',l=$('#ln-l').value.trim(),u=$('#ln-u').value.trim();if(!u)return toast('Paste a link first');closeSheet();linkArr(d.mod,w).push({id:uid(),label:l||u.replace(/^https?:\/\//,'').slice(0,24),url:/^https?:/.test(u)?u:'https://'+u});save();rerender()},
   linkDel:(el,d)=>{const w=d.w||'gen',arr=linkArr(d.mod,w),j=+d.j,L=arr.splice(j,1)[0];trash('link',L.label,{mod:d.mod,w,link:L,idx:j});rerender()},
   openFile:async(el,d)=>{let f=await idbGet('files',d.f);
     if(!f){if(!SYNC.conf)return toast('File not found on this device');toast('Downloading…');try{f=await downloadFile(d.f)}catch(e){return toast(e.message||'Could not download the file')}}
@@ -123,6 +126,7 @@ const ACT={
   notifOff:async()=>{await disableNotifications();rerender();toast('Reminders turned off on this device')},
   syncOn:()=>showLogin(),
   undo:()=>undo(),redo:()=>redo(),
+  checkUpd:()=>checkUpdate(true),
   textSz:(el,d)=>{textSize(d.v);applyTheme();rerender()},
   loginForgot:()=>showLogin($('#lg-u')?.value,'', 'recover'),
   loginBack:()=>showLogin($('#lg-u')?.value),
@@ -367,9 +371,21 @@ async function attachFile(e){const f=e.target.files[0];if(!f)return;if(f.size>MA
 function importBackup(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!d.v)throw 0;if(!confirm('Replace your current data with this backup?'))return;S=d;load2();save(true);applyTheme();render();toast('Backup imported ✓')}catch(err){toast('This file is not a My Daily Journal backup')}};r.readAsText(f)}
 
 /* ---------- boot ---------- */
+/* new version online → reload by itself (the app on the Home Screen stays open in the background) */
+let lastUpdCheck=0;
+async function checkUpdate(force){if(!location.protocol.startsWith('http'))return;if(!force&&Date.now()-lastUpdCheck<60e3)return;lastUpdCheck=Date.now();
+  try{const v=(await (await fetch('version.txt?t='+Date.now(),{cache:'no-store'})).text()).trim();
+    if(!v||v===APP_VERSION){if(force)toast('You have the latest version ✓ ('+APP_VERSION+')');return}
+    let tried=null;try{tried=sessionStorage.getItem('mdj-upd')}catch(e){}if(tried===v&&!force)return;try{sessionStorage.setItem('mdj-upd',v)}catch(e){}
+    toast('Updating to the new version…');window._updating=true;save(true);if(SYNC.conf&&SYNC.conf.dirty){try{lastPushAt=0;await syncPush(true)}catch(e){}}
+    try{for(const k of await caches.keys())await caches.delete(k)}catch(e){}
+    try{const reg=await navigator.serviceWorker?.getRegistration();await reg?.update()}catch(e){}
+    setTimeout(()=>location.reload(),600)}catch(e){if(force)toast('Could not check — are you online?')}}
 async function boot(){load();await recoverIfEmpty();applyTheme();
   try{navigator.storage?.persist?.()}catch(e){}
-  if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker'in navigator&&location.protocol.startsWith('http')){navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).catch(()=>{});
+    let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded||!window._updating)return;reloaded=true;location.reload()})}
+  checkUpdate();document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdate()});setInterval(checkUpdate,30*60e3);
   saveListeners.push(onLocalSave);
   navigator.serviceWorker?.addEventListener?.('message',ev=>{if(ev.data==='resubscribe'&&Notification.permission==='granted')enableNotifications()});
   render();save();
