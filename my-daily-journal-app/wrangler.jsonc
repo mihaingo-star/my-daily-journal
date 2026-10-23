@@ -1,12 +1,12 @@
 {
   // ① Replace with the exact name of your Worker (top of its page on Cloudflare)
-  "name": "nom-de-ton-worker",
+  "name": "my-daily-journal",
   "main": "src/index.js",
   "compatibility_date": "2025-09-01",
   "assets": { "directory": ".", "binding": "ASSETS" },
   "kv_namespaces": [
     // ② Replace with the ID of your KV namespace mdj-data (Storage & Databases → Workers KV)
-    { "binding": "MDJ", "id": "COLLE-ICI-L-ID-DU-KV" }
+    { "binding": "MDJ", "id": "88ed7749a32e42aabe441c099163392e" }
   ],
   "triggers": { "crons": ["*/5 * * * *"] }
 }
