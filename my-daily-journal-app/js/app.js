@@ -110,7 +110,7 @@ const ACT={
     <div class="field"><label>Day</label><input id="wk-d" type="date" value="${TK()}"></div>
     <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="workSave" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}">Add day</button></div></div>`),
   workSave:(el,d)=>{const k=$('#wk-d').value;if(!k)return toast('Choose a day');const x=S.mods[d.mod][d.l][+d.j];x.work=x.work||[];if(!x.work.some(w=>w.k===k))x.work.push({k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast('In My week on '+fmtDay(parseKey(k)))},
-  workDel:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[]).splice(+d.w,1)[0];save();rerender();if(w)toast('Day removed',()=>{x.work.push(w);x.work.sort((a,b)=>a.k<b.k?-1:1);save();rerender()})},
+  workDel:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[]).splice(+d.w,1)[0];save();rerender();if(w)toast('Work day removed · '+fmtDay(parseKey(w.k)),()=>{x.work.push(w);x.work.sort((a,b)=>a.k<b.k?-1:1);save();rerender()})},
   workTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[])[+d.w];if(!w)return;w.d=!w.d;if(w.d)markActive();save();checkStickers();rerender()},
   linkSheet:(el,d)=>sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Add</em> a link</div></div>
     <div class="field"><label>Name</label><input id="ln-l" placeholder="e.g. Online class"></div><div class="field" style="margin-top:8px"><label>Link</label><input id="ln-u" placeholder="https://…" inputmode="url" autocapitalize="none"></div>
