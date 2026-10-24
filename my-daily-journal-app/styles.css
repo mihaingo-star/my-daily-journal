@@ -553,3 +553,17 @@ textarea.lined{width:100%;resize:vertical;min-height:80px;background-image:repea
 .lchip .x{font-size:.7rem;opacity:.6;padding:4px}
 .ladd{display:flex;gap:6px;flex-wrap:wrap}
 .dadd{display:inline-flex;align-items:center;gap:4px;padding:7px 12px;border-radius:999px;border:1px dashed var(--rd);color:var(--rd);font:600 .55rem var(--sans);letter-spacing:.14em;text-transform:uppercase;background:none;cursor:pointer}
+
+/* progress gauge for notebook items — thin bar like the app's progress lines */
+.gauge{display:inline-flex;align-items:center;gap:10px;flex:none;margin-left:6px}
+.gauge input[type=range]{-webkit-appearance:none;appearance:none;width:120px;height:4px;border-radius:999px;background:linear-gradient(90deg,var(--rose) var(--v,0%),var(--blush) var(--v,0%));outline:none;margin:8px 0;cursor:pointer}
+.gauge input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--paper);border:1.5px solid var(--rose);box-shadow:0 1px 2px rgba(80,20,30,.18)}
+.gauge input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:var(--paper);border:1.5px solid var(--rose)}
+.gauge .gv{font:italic 400 .95rem var(--serif);color:var(--rd);min-width:38px;text-align:right}
+.gauge.full input[type=range]{background:var(--wine)}.gauge.full input[type=range]::-webkit-slider-thumb{border-color:var(--wine)}.gauge.full .gv{color:var(--wine)}
+/* binder items in My week look like the other tasks */
+.bli .tx .tt{display:block}
+.bli.done .tx{text-decoration:none}.bli.done .tx .tt{text-decoration:line-through;color:var(--muted)}
+.bli .tx .gauge{display:flex;margin:2px 0 0}.bli .tx .gauge input[type=range]{flex:1;width:auto;max-width:200px;margin:6px 0}
+.bli .tx .gauge .gv{font-size:.85rem}
+.bli .meta{color:var(--rd)}
