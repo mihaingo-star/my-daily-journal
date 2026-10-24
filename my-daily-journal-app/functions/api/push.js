@@ -7,7 +7,7 @@ const json = (o, status = 200) =>
   new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const validDev = (d) => /^[a-z0-9]{8,40}$/.test(d || '');
-const TYPES = ['morning', 'dayBefore', 'three', 'streak', 'groc', 'water'];
+const TYPES = ['plan', 'morning', 'dayBefore', 'three', 'streak', 'groc', 'water'];
 const DAYS = 31;
 
 async function vapid(env) {
@@ -116,7 +116,7 @@ export async function onRequestPost({ request, env }) {
     ...prev,
     sub: cleanSub,
     name: String(b.name || prev.name || 'Device').slice(0, 30),
-    types: b.types ? cleanTypes(b.types) : prev.types || cleanTypes({ morning: 1, dayBefore: 1, three: 1, streak: 1, groc: 1 }),
+    types: b.types ? cleanTypes(b.types) : prev.types || cleanTypes({ plan: 1, morning: 1, dayBefore: 1, three: 1, streak: 1, groc: 1 }),
     on: prev.on !== false,
     site: new URL(request.url).origin,
     acct: acctOk ? b.acct : prev.acct || '',
