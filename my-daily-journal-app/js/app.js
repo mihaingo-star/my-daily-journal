@@ -84,6 +84,7 @@ const ACT={
   /* binder */
   modTab:(el,d)=>{S.ui.modTab[d.mod]=d.l;save();rerender()},
   modTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.d=!x.d;if(x.d)markActive();save();checkStickers();rerender()},
+  modFull:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const was=+x.p||0;x.p=was>=100?(x._pp||0):100;if(x.p===100){x._pp=was;markActive()}save();checkStickers();rerender()},
   openMod:(el,d)=>{S.ui.modTab[d.mod]=d.l;save();location.hash='#mod/'+d.mod},
   modSt:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const n=statusOf(d.l==='tuto'&&d.mod==='diss'?'tuto_diss':d.l).length;x.st=((x.st||0)+1)%n;if(x.st)markActive();save();checkStickers();rerender()},
   modAdd:(el,d)=>{const t=$('#mi-t').value.trim();if(!t)return toast('Write something first');const date=$('#mi-d').value||'';S.mods[d.mod][d.l].push({id:uid(),t,date,d:false,st:0});save();rerender();toast(date?'Added · also in your calendar':'Added');setTimeout(()=>$('#mi-t')?.focus(),30)},
