@@ -1,6 +1,6 @@
 /* ============ MY DAILY JOURNAL — core (state, storage, helpers) ============ */
 'use strict';
-const APP_VERSION='6.3';
+const APP_VERSION='6.4';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -122,7 +122,7 @@ async function recoverIfEmpty(){ // if localStorage was wiped but IndexedDB stil
   if(localStorage.getItem(KEY))return false;const st=await idbGet('state','current');if(st&&st.v){S=st;load2();return true}return false}
 function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k];for(const g of['set','rem','prof','sem','cfg','pin'])for(const k in b[g])if(S[g][k]===undefined)S[g][k]=b[g][k];afterLoad()}
 function linkArr(mod,w){const M=S.mods[mod];if(!w||w==='gen')return M.links;M.sec=M.sec||{};return M.sec[w]=M.sec[w]||[]}
-function afterLoad(){if(!noHist){UNDO=[];REDO=[]}if(S.lock&&S.lock.pin&&!(S.pin&&S.pin.pin)){S.pin={pin:S.lock.pin,salt:S.lock.salt,after:S.lock.after||1}}if(S.lock){delete S.lock.pin;delete S.lock.salt;delete S.lock.after}buildBlocks();applyModCfg();lastBody=contentOf()}
+function afterLoad(){try{for(const m in S.mods||{})for(const l of['assign','lect','tuto'])for(const x of (S.mods[m][l]||[]))if(isGauge(m,l)&&x.p==null&&x.st!=null){x.p=itemP(m,l,x)}}catch(e){}if(!noHist){UNDO=[];REDO=[]}if(S.lock&&S.lock.pin&&!(S.pin&&S.pin.pin)){S.pin={pin:S.lock.pin,salt:S.lock.salt,after:S.lock.after||1}}if(S.lock){delete S.lock.pin;delete S.lock.salt;delete S.lock.after}buildBlocks();applyModCfg();lastBody=contentOf()}
 
 /* ---------- activity / streak ---------- */
 function markActive(){const k=TK();if(!S.active[k]){S.active[k]=1;const s=streak();if(s>S.best)S.best=s}}
@@ -172,8 +172,11 @@ const statusOf=k=>{const v=(CFG().status||{})[k];return Array.isArray(v)&&v.leng
 const foodCats=()=>({...FOOD_CATS,...(CFG().foodCats||{})});
 const gradeMins=()=>{const g=CFG().grades||{};return{A:+g.A||70,B:+g.B||60,C:+g.C||50,D:+g.D||40}};
 const STATUS={assign:['to do','in progress','submitted'],lect:['not started','to review','notes done'],tuto_diss:['draft','sent','corrected','final']};
-function listStats(mod,l){const a=S.mods[mod][l];const n=a.length;let d=0;
-  if(l==='assign')d=a.filter(x=>x.st===2).length;else if(l==='lect')d=a.filter(x=>x.st===2).length;else if(l==='tuto'&&mod==='diss')d=a.filter(x=>x.st===3).length;else d=a.filter(x=>x.d).length;return{n,d,p:n?d/n:0}}
+/* progress of a notebook item: a gauge (0–100 %) for assignments, lectures and dissertation chapters, a tick for the others */
+const isGauge=(mod,l)=>l==='assign'||l==='lect'||(l==='tuto'&&mod==='diss');
+function itemP(mod,l,x){if(isGauge(mod,l)){if(x.p!=null)return +x.p||0;if(x.st!=null){const n=(STATUS[l==='tuto'?'tuto_diss':l]||[0,0,0]).length;return Math.round(Math.min(x.st,n-1)/(n-1)*100)}return 0}return x.d?100:0}
+const itemDone=(mod,l,x)=>itemP(mod,l,x)>=100;
+function listStats(mod,l){const a=S.mods[mod][l];const n=a.length;let d=0,sum=0;for(const x of a){const p=itemP(mod,l,x);sum+=p;if(p>=100)d++}return{n,d,p:n?sum/n/100:0}}
 function modProgress(mod){const ls=['todo','assign','tuto','lect'].map(l=>listStats(mod,l)).filter(s=>s.n);return ls.length?ls.reduce((a,s)=>a+s.p,0)/ls.length:0}
 function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tests){tw+=num(t.weight);const out=num(t.out)>0?num(t.out):100;got+=Math.min(num(t.score),out)/out*num(t.weight)}
   const ew=num(M.examW);const need=T=>ew?(T-got)/(ew/100):Infinity;
@@ -182,6 +185,6 @@ function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tes
 /* ---------- all dated items (for calendar / today / reminders) ---------- */
 function datedItems(k){
   const out=[];for(const t of dayItems(k))out.push({k,t:t.t,d:t.d,time:t.time,end:t.end,col:'var(--c-task)',src:'Task',rec:t.rec});
-  for(const m of MODS)for(const l of['todo','assign','tuto','lect'])for(const x of S.mods[m.id][l])if(x.date===k)out.push({k,t:`${m.short} · ${x.t}`,d:l==='assign'?x.st===2:l==='lect'?x.st===2:!!x.d,col:m.col,src:m.short,mod:m.id,list:l});
+  for(const m of MODS)for(const l of['todo','assign','tuto','lect'])for(const x of S.mods[m.id][l])if(x.date===k)out.push({k,t:`${m.short} · ${x.t}`,d:itemDone(m.id,l,x),p:itemP(m.id,l,x),col:m.col,src:m.short,mod:m.id,list:l});
   for(const r of S.groc.receipts)if(r.date===k)out.push({k,t:`Groceries · ${rs(r.real)}`,d:true,col:'var(--c-groc)',src:'Groceries'});
   return out}

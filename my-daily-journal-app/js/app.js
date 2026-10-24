@@ -84,6 +84,7 @@ const ACT={
   /* binder */
   modTab:(el,d)=>{S.ui.modTab[d.mod]=d.l;save();rerender()},
   modTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.d=!x.d;if(x.d)markActive();save();checkStickers();rerender()},
+  openMod:(el,d)=>{S.ui.modTab[d.mod]=d.l;save();location.hash='#mod/'+d.mod},
   modSt:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const n=statusOf(d.l==='tuto'&&d.mod==='diss'?'tuto_diss':d.l).length;x.st=((x.st||0)+1)%n;if(x.st)markActive();save();checkStickers();rerender()},
   modAdd:(el,d)=>{const t=$('#mi-t').value.trim();if(!t)return toast('Write something first');const date=$('#mi-d').value||'';S.mods[d.mod][d.l].push({id:uid(),t,date,d:false,st:0});save();rerender();toast(date?'Added · also in your calendar':'Added');setTimeout(()=>$('#mi-t')?.focus(),30)},
   linkSheet:(el,d)=>sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Add</em> a link</div></div>
@@ -187,6 +188,7 @@ document.addEventListener('input',e=>{const el=e.target,f=el.dataset.in;if(!f)re
     case'testN':S.mods[d.mod].tests[+d.j].name=v;break;case'testS':{const t=S.mods[d.mod].tests[+d.j];t.score=v===''?'':clamp(num(v),0,num(t.out)>0?num(t.out):100);break}case'testO':{const t=S.mods[d.mod].tests[+d.j];t.out=num(v)>0?num(v):'';break}case'testW':S.mods[d.mod].tests[+d.j].weight=num(v);break;case'examW':S.mods[d.mod].examW=num(v);break;
     case'dumpT':S.dump[+d.j].t=v;break;
     case'remTime':S.rem[d.k]=v;break;
+    case'modP':{const x=S.mods[d.mod][d.l][+d.j];const nv=clamp(Math.round(num(v)),0,100);if(nv>(+x.p||0))markActive();x.p=nv;el.style.setProperty('--v',nv+'%');const lab=el.parentElement.querySelector('.gv');if(lab)lab.textContent=nv+'%';el.parentElement.classList.toggle('full',nv>=100);break}
     case'remDay':S.rem.gday=+v;break;
     case'remEvery':{const e=num(v);if(e>=0.5&&e<=12)S.rem.wevery=e;break}
     case'cfgList':S.cfg.lists[d.k]=v.trim()||({todo:'To-do',assign:'Assignments',tuto:'Tutorials',lect:'Lectures',chapters:'Chapters'})[d.k];break;
@@ -207,7 +209,7 @@ document.addEventListener('change',e=>{const el=e.target,f=el.dataset.in;
   if(f==='wkSel'){S.ui.week=+el.value;save();render();return}
   if(f==='sem'){if(S.sem.start&&!isNaN(parseKey(S.sem.start))){buildBlocks();S.ui.week=null;save();rerender()}return}
   if(['prof','modName','modShort','waterGoal'].includes(f)){applyModCfg();rerender();const ib=$('#intro .bk');return}
-  if(['calGoal','kq','gBudget','gPrice','testS','testO','testW','examW','fk'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
+  if(['calGoal','kq','gBudget','gPrice','testS','testO','testW','examW','fk','modP'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
 document.addEventListener('keydown',e=>{const el=e.target;
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!el.matches('input,textarea,[contenteditable="true"]')){e.preventDefault();e.shiftKey?redo():undo();return}
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='y'&&!el.matches('input,textarea,[contenteditable="true"]')){e.preventDefault();redo();return}
