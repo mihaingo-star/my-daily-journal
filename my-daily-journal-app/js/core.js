@@ -1,6 +1,6 @@
 /* ============ MY DAILY JOURNAL — core (state, storage, helpers) ============ */
 'use strict';
-const APP_VERSION='6.9';
+const APP_VERSION='7.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -197,7 +197,11 @@ function deadlinesBetween(k1,k2){const out=[];for(const m of MODS){if(m.id==='du
 function dayLoad(k){return dayItems(k).length+workOn(k).length}
 function suggestDays(x,n){const t=today(),last=addDays(parseKey(x.date),-1),have=new Set((x.work||[]).map(w=>w.k));const days=[];for(let d=t;d<=last;d=addDays(d,1)){const k=key(d);if(!have.has(k))days.push(k)}
   if(!days.length)return[];n=Math.max(1,Math.min(n,days.length));const out=[];for(let i=0;i<n;i++){const a=Math.floor(i*days.length/n),b=Math.floor((i+1)*days.length/n);const seg=days.slice(a,Math.max(b,a+1));seg.sort((p,q)=>dayLoad(p)-dayLoad(q)||(p<q?-1:1));out.push(seg[0])}return[...new Set(out)].sort()}
-function workOn(k){const out=[];for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const e of todoEntries(m.id))(e.x.work||[]).forEach((w,wi)=>{if(w.k===k)out.push({m,...e,w,wi})})}return out.sort((a,b)=>(b.x.star?1:0)-(a.x.star?1:0))}
+/* deadlines of a day (for My week) */
+function dueOn(k){const out=[];for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const l of['assign','tuto','lect'])for(const x of (S.mods[m.id][l]||[]))if(x.date===k)out.push({m,l,x})}return out}
+/* steps checked → the gauge follows (you can still move it) */
+function syncGauge(mod,l,x){const ws=x.work||[];if(!ws.length)return;const dn=ws.filter(w=>w.d).length;if(isGauge(mod,l))x.p=Math.round(dn/ws.length*100);else x.d=dn===ws.length}
+function workOn(k){const out=[];for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const e of todoEntries(m.id))(e.x.work||[]).forEach((w,wi)=>{if(w.k===k)out.push({m,...e,w,wi})})}return out.sort((a,b)=>((b.w.star||b.x.star)?1:0)-((a.w.star||a.x.star)?1:0))}
 function listStats(mod,l){if(l==='todo'){const es=todoEntries(mod);const d=es.filter(e=>entryDone(mod,e)).length;return{n:es.length,d,p:es.length?d/es.length:0}}const a=S.mods[mod][l];const n=a.length;let d=0,sum=0;for(const x of a){const p=itemP(mod,l,x);sum+=p;if(p>=100)d++}return{n,d,p:n?sum/n/100:0}}
 function modProgress(mod){const own=S.mods[mod].todo||[];const ls=[{n:own.length,p:own.length?own.filter(x=>x.d).length/own.length:0},...['assign','tuto','lect'].map(l=>listStats(mod,l))].filter(s=>s.n);return ls.length?ls.reduce((a,s)=>a+s.p,0)/ls.length:0}
 function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tests){tw+=num(t.weight);const out=num(t.out)>0?num(t.out):100;got+=Math.min(num(t.score),out)/out*num(t.weight)}
@@ -206,7 +210,7 @@ function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tes
 
 /* ---------- all dated items (for calendar / today / reminders) ---------- */
 /* what is planned on a day: tasks, deadlines and binder work days (Home, Today, My week PDF, morning reminder) */
-function dayPlan(k){return[...datedItems(k),...workOn(k).map(e=>({k,t:`${e.m.short} · ${e.x.t}`,d:!!e.w.d,col:e.m.col,src:e.m.short,work:true}))]}
+function dayPlan(k){return[...datedItems(k),...workOn(k).map(e=>({k,t:`${e.m.short} · ${e.w.t||e.x.t}`,d:!!e.w.d,col:e.m.col,src:e.m.short,work:true}))]}
 function datedItems(k){
   const out=[];for(const t of dayItems(k))out.push({k,t:t.t,d:t.d,time:t.time,end:t.end,col:'var(--c-task)',src:'Task',rec:t.rec});
   for(const m of MODS)for(const l of['assign','tuto','lect'])for(const x of S.mods[m.id][l])if(x.date===k)out.push({k,t:`${m.short} · ${x.t} due`,d:itemDone(m.id,l,x),p:itemP(m.id,l,x),col:m.col,src:m.short,mod:m.id,list:l});

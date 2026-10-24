@@ -94,7 +94,7 @@ const ACT={
   starTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.star=!x.star;save();rerender();toast(x.star?'Priority ★':'Priority removed')},
   planMe:(el,d)=>planSheet(d.mod,d.l,+d.j,3),
   planN:(el,d)=>planSheet(d.mod,d.l,+d.j,+d.n),
-  planSave:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const ks=$$('#sheet [data-pk].on').map(b=>b.dataset.pk);if(!ks.length)return toast('Choose at least one day');x.work=x.work||[];for(const k of ks)if(!x.work.some(w=>w.k===k))x.work.push({k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast(`${ks.length} work day${ks.length>1?'s':''} added · in My week`)},
+  planSave:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const ks=$$('#sheet [data-pk].on').map(b=>b.dataset.pk);if(!ks.length)return toast('Choose at least one day');x.work=x.work||[];let n=x.work.length;for(const k of ks)if(!x.work.some(w=>w.k===k))x.work.push({k,d:false,t:'Work session '+(++n)});syncGauge(d.mod,d.l,x);closeSheet();save();rerender();toast(`${ks.length} step${ks.length>1?'s':''} added — rename them as you like`)},
   pkTog:(el)=>{el.classList.toggle('on');const n=$$('#sheet [data-pk].on').length;const b=$('#sheet [data-act=planSave]');if(b)b.textContent=n?`Add ${n} day${n>1?'s':''}`:'Add'},
   missMenu:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j],w=x.work[+d.w];sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Missed</em> day</div></div><p class="hint" style="font-size:1rem;margin:4px 0 10px">${esc(x.t)} · planned ${fmtDay(parseKey(w.k))}</p>
     <div class="btns" style="flex-direction:column;margin:0"><button class="btn d" data-act="missMove" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}" data-to="0">Move to today</button><button class="btn" data-act="missMove" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}" data-to="1">Move to tomorrow</button><button class="btn" data-act="missDone" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}">It's done ✓</button><button class="btn" data-act="missSkip" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}">Skip this day</button></div></div>`)},
@@ -111,7 +111,10 @@ const ACT={
     <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="workSave" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}">Add day</button></div></div>`),
   workSave:(el,d)=>{const k=$('#wk-d').value;if(!k)return toast('Choose a day');const x=S.mods[d.mod][d.l][+d.j];x.work=x.work||[];if(!x.work.some(w=>w.k===k))x.work.push({k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast('In My week on '+fmtDay(parseKey(k)))},
   workDel:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[]).splice(+d.w,1)[0];save();rerender();if(w)toast('Work day removed · '+fmtDay(parseKey(w.k)),()=>{x.work.push(w);x.work.sort((a,b)=>a.k<b.k?-1:1);save();rerender()})},
-  workTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[])[+d.w];if(!w)return;w.d=!w.d;if(w.d)markActive();save();checkStickers();rerender()},
+  workTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[])[+d.w];if(!w)return;w.d=!w.d;if(w.d)markActive();if(d.l!=='todo')syncGauge(d.mod,d.l,x);save();checkStickers();rerender()},
+  stepAdd:(el,d)=>{const t=$(`#st-t-${d.l}-${d.j}`).value.trim(),k=$(`#st-d-${d.l}-${d.j}`).value;if(!t&&!k)return toast('Write the step and choose its date');if(!k)return toast('Choose a date for this step');const x=S.mods[d.mod][d.l][+d.j];x.work=x.work||[];x.work.push({k,d:false,t});if(d.l!=='todo')syncGauge(d.mod,d.l,x);save();rerender();toast('Step added · in My week on '+fmtDay(parseKey(k)));setTimeout(()=>$(`#st-t-${d.l}-${d.j}`)?.focus(),30)},
+  stepDel:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[]).splice(+d.w,1)[0];if(!w)return;if(d.l!=='todo')syncGauge(d.mod,d.l,x);save();rerender();toast('Step deleted',()=>{x.work.splice(+d.w,0,w);syncGauge(d.mod,d.l,x);save();rerender()})},
+  stepStar:(el,d)=>{const w=S.mods[d.mod][d.l][+d.j].work[+d.w];w.star=!w.star;save();rerender();toast(w.star?'Priority ★':'Priority removed')},
   linkSheet:(el,d)=>sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Add</em> a link</div></div>
     <div class="field"><label>Name</label><input id="ln-l" placeholder="e.g. Online class"></div><div class="field" style="margin-top:8px"><label>Link</label><input id="ln-u" placeholder="https://…" inputmode="url" autocapitalize="none"></div>
     <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="linkAdd" data-mod="${d.mod}" data-w="${d.w}">Add link</button></div></div>`,sh=>setTimeout(()=>sh.querySelector('#ln-l')?.focus(),300)),
@@ -210,6 +213,9 @@ document.addEventListener('input',e=>{const el=e.target,f=el.dataset.in;if(!f)re
     case'gBudget':S.groc.budget=Math.max(0,num(v));break;
     case'gPrice':{const x=S.groc.items.find(i=>i.id===d.id);if(x)x.price=Math.max(0,num(v));break}
     case'modT':S.mods[d.mod][d.l][+d.j].t=v;break;
+    case'stepT':{const w=S.mods[d.mod][d.l][+d.j].work[+d.w];if(w)w.t=v.trim();break}
+    case'stepD':{const w=S.mods[d.mod][d.l][+d.j].work[+d.w];if(w&&v){w.k=v}break}
+    case'todoD':{const x=S.mods[d.mod].todo[+d.j];x.work=x.work||[];if(v){if(x.work[0])x.work[0].k=v;else x.work.push({k:v,d:false})}else x.work=x.work.slice(1);break}
     case'testN':S.mods[d.mod].tests[+d.j].name=v;break;case'testS':{const t=S.mods[d.mod].tests[+d.j];t.score=v===''?'':clamp(num(v),0,num(t.out)>0?num(t.out):100);break}case'testO':{const t=S.mods[d.mod].tests[+d.j];t.out=num(v)>0?num(v):'';break}case'testW':S.mods[d.mod].tests[+d.j].weight=num(v);break;case'examW':S.mods[d.mod].examW=num(v);break;
     case'dumpT':S.dump[+d.j].t=v;break;
     case'remTime':S.rem[d.k]=v;break;
@@ -234,7 +240,7 @@ document.addEventListener('change',e=>{const el=e.target,f=el.dataset.in;
   if(f==='wkSel'){S.ui.week=+el.value;save();render();return}
   if(f==='sem'){if(S.sem.start&&!isNaN(parseKey(S.sem.start))){buildBlocks();S.ui.week=null;save();rerender()}return}
   if(['prof','modName','modShort','waterGoal'].includes(f)){applyModCfg();rerender();const ib=$('#intro .bk');return}
-  if(['calGoal','kq','gBudget','gPrice','testS','testO','testW','examW','fk','modP'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
+  if(['calGoal','kq','gBudget','gPrice','testS','testO','testW','examW','fk','modP','stepD','todoD'].includes(f)){if(el.dataset.sh)foodSheet($('#fsearch')?.value||'');rerender()}});
 document.addEventListener('keydown',e=>{const el=e.target;
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!el.matches('input,textarea,[contenteditable="true"]')){e.preventDefault();e.shiftKey?redo():undo();return}
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='y'&&!el.matches('input,textarea,[contenteditable="true"]')){e.preventDefault();redo();return}
@@ -242,6 +248,7 @@ document.addEventListener('keydown',e=>{const el=e.target;
   if(e.key==='Enter'&&el.isContentEditable){e.preventDefault();el.blur()}
   if(e.key==='Enter'&&el.id==='dump-in')ACT.dumpAdd();
   if(e.key==='Enter'&&(el.id==='gi-n'||el.id==='gi-p'||el.id==='gi-q'))grocAdd();
+  if(e.key==='Enter'&&el.dataset.stepadd){const [l,j]=el.dataset.stepadd.split('-');ACT.stepAdd(el,{mod:ARGS[0],l,j});return}
   if(e.key==='Enter'&&el.id==='mi-t')$('[data-act=modAdd]')?.click();
   if(e.key==='Enter'&&el.id==='nt-t')ACT.taskSave();
   if(e.key==='Enter'&&['lg-p','lg-u','lg-r','lg-n'].includes(el.id)){e.preventDefault();($('[data-act=loginGo]')||$('[data-act=recoverGo]'))?.click();return}
@@ -307,6 +314,7 @@ function swipeDelete(row){const d=row.dataset;
   if(d.swipe==='groc'){const i=S.groc.items.findIndex(x=>x.id===d.id),x=S.groc.items.splice(i,1)[0];trash('groc',x.name,{item:x,idx:i})}
   else if(d.swipe==='receipt'){const i=S.groc.receipts.findIndex(r=>r.id===d.id),r=S.groc.receipts.splice(i,1)[0];trash('receipt','Receipt '+fmtDay(parseKey(r.date)),{r,idx:i})}
   else if(d.swipe==='todo'){ACT.todoDel(row,d);return}
+  else if(d.swipe==='step'){ACT.stepDel(row,d);return}
   else if(d.swipe==='mod'){const arr=S.mods[d.mod][d.l],j=+d.j,x=arr.splice(j,1)[0];trash('mod',x.t||'Item',{mod:d.mod,list:d.l,item:x,idx:j})}
   rerender()}
 
