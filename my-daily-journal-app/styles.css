@@ -567,3 +567,43 @@ textarea.lined{width:100%;resize:vertical;min-height:80px;background-image:repea
 .bli .tx .gauge{display:flex;margin:2px 0 0}.bli .tx .gauge input[type=range]{flex:1;width:auto;max-width:200px;margin:6px 0}
 .bli .tx .gauge .gv{font-size:.85rem}
 .bli .meta{color:var(--rd)}
+
+/* To-do of a notebook: work days */
+.todo-row{align-items:flex-start}.todo-row .box{margin-top:3px}
+.todo-row .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.todo-row .from{font:600 .48rem var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.wd{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.wchip{display:inline-flex;align-items:center;gap:4px;font:600 .52rem var(--sans);letter-spacing:.12em;text-transform:uppercase;background:var(--blush);color:var(--rd);border-radius:999px;padding:5px 6px 5px 10px}
+.wchip.on{background:var(--rose);color:#fff}
+.wchip button{font-size:.6rem;opacity:.6;padding:0 2px;color:inherit;background:none}
+.wd .dadd{padding:5px 10px}
+
+/* organisation: countdown, not planned, priority, to plan, missed */
+.cd{font:italic 500 .9rem var(--serif);color:var(--rd);text-transform:none;letter-spacing:0;margin-left:6px}
+.cd.hot{color:#b3261e;font-weight:600}
+.np{font:700 .45rem var(--sans);letter-spacing:.12em;text-transform:uppercase;background:#fbe3c8;color:#8a4b12;border-radius:5px;padding:3px 6px;margin-left:6px;white-space:nowrap}
+.star{background:none;font-size:1.05rem;color:var(--line);padding:2px 4px;align-self:flex-start;margin-top:2px}.star.on{color:#c99a2e}
+.meta.st{color:#c99a2e!important}
+.wd .dadd.plan{background:var(--wine);color:#fff;border-color:var(--wine)}
+.toplan{border:1.5px dashed var(--rose);background:color-mix(in srgb,var(--blush) 40%,var(--card))}
+.toplan .tph{font:600 .55rem var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--rd);margin-bottom:4px}.toplan .tph small{color:var(--muted);letter-spacing:.12em;margin-left:6px}
+.tpi{cursor:grab;touch-action:none}.tpi .grip{color:var(--muted)}
+.bli.missed .tt{color:var(--rd)}.bli.missed .meta{color:#b3261e}
+#sheet .box.on{background:var(--rose);border-color:var(--rose)}
+@media (min-width:768px){#app[data-route=week] .toplan,#app[data-route=week] .c-next{grid-column:1/-1}}
+
+/* To-do rows: same style as the other sections */
+.todo-row{align-items:center}.todo-row .box{margin-top:0}
+.todo-row .tx{display:flex;flex-direction:column;gap:1px;min-width:0;font:500 1.03rem/1.2 var(--hand)}
+.todo-row .tt{outline:none}
+.todo-row .cd{margin-left:0;font-size:.85rem}
+.todo-row .dbox.empty{border-style:dashed}.todo-row .dbox.empty b{color:var(--muted)}
+.wchips{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;align-items:center;max-width:46%}
+.wchips .wchip{font:600 .48rem var(--sans);letter-spacing:.1em;text-transform:uppercase;background:var(--blush);color:var(--rd);border-radius:999px;padding:5px 8px;border:0}
+.wchips .wchip.on{background:var(--rose);color:#fff}
+.wchips .wadd{width:24px;height:24px;border-radius:50%;border:1px dashed var(--rd);color:var(--rd);background:none;font:600 .8rem/1 var(--sans);display:inline-flex;align-items:center;justify-content:center;padding:0}
+.todo-row .star{align-self:center;margin-top:0}
+@media (max-width:640px){
+  .todo-row{flex-wrap:wrap;row-gap:4px}
+  .todo-row .wchips{order:9;flex-basis:100%;max-width:none;justify-content:flex-start;padding-left:80px}
+}
