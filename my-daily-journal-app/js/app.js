@@ -87,7 +87,31 @@ const ACT={
   modFull:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const was=+x.p||0;x.p=was>=100?(x._pp||0):100;if(x.p===100){x._pp=was;markActive()}save();checkStickers();rerender()},
   openMod:(el,d)=>{S.ui.modTab[d.mod]=d.l;save();location.hash='#mod/'+d.mod},
   modSt:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const n=statusOf(d.l==='tuto'&&d.mod==='diss'?'tuto_diss':d.l).length;x.st=((x.st||0)+1)%n;if(x.st)markActive();save();checkStickers();rerender()},
-  modAdd:(el,d)=>{const t=$('#mi-t').value.trim();if(!t)return toast('Write something first');const date=$('#mi-d').value||'';S.mods[d.mod][d.l].push({id:uid(),t,date,d:false,st:0});save();rerender();toast(date?'Added · also in your calendar':'Added');setTimeout(()=>$('#mi-t')?.focus(),30)},
+  modAdd:(el,d)=>{const t=$('#mi-t').value.trim();if(!t)return toast('Write something first');const date=$('#mi-d').value||'';
+    if(d.l==='todo'){S.mods[d.mod].todo.push({id:uid(),t,d:false,work:date?[{k:date,d:false}]:[]});save();rerender();toast(date?'Added · in My week on '+fmtDay(parseKey(date)):'Added')}
+    else{const it={id:uid(),t,date,d:false};if(isGauge(d.mod,d.l))it.p=0;S.mods[d.mod][d.l].push(it);save();rerender();toast(date?'Added · deadline in your calendar · also in To-do':'Added · also in To-do')}
+    setTimeout(()=>$('#mi-t')?.focus(),30)},
+  starTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.star=!x.star;save();rerender();toast(x.star?'Priority ★':'Priority removed')},
+  planMe:(el,d)=>planSheet(d.mod,d.l,+d.j,3),
+  planN:(el,d)=>planSheet(d.mod,d.l,+d.j,+d.n),
+  planSave:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const ks=$$('#sheet [data-pk].on').map(b=>b.dataset.pk);if(!ks.length)return toast('Choose at least one day');x.work=x.work||[];for(const k of ks)if(!x.work.some(w=>w.k===k))x.work.push({k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast(`${ks.length} work day${ks.length>1?'s':''} added · in My week`)},
+  pkTog:(el)=>{el.classList.toggle('on');const n=$$('#sheet [data-pk].on').length;const b=$('#sheet [data-act=planSave]');if(b)b.textContent=n?`Add ${n} day${n>1?'s':''}`:'Add'},
+  missMenu:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j],w=x.work[+d.w];sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Missed</em> day</div></div><p class="hint" style="font-size:1rem;margin:4px 0 10px">${esc(x.t)} · planned ${fmtDay(parseKey(w.k))}</p>
+    <div class="btns" style="flex-direction:column;margin:0"><button class="btn d" data-act="missMove" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}" data-to="0">Move to today</button><button class="btn" data-act="missMove" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}" data-to="1">Move to tomorrow</button><button class="btn" data-act="missDone" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}">It's done ✓</button><button class="btn" data-act="missSkip" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}" data-w="${d.w}">Skip this day</button></div></div>`)},
+  missMove:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const k=key(addDays(today(),+d.to));x.work.splice(+d.w,1);if(!x.work.some(w=>w.k===k))x.work.push({k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast('Moved to '+fmtDay(parseKey(k)))},
+  missDone:(el,d)=>{const w=S.mods[d.mod][d.l][+d.j].work[+d.w];w.d=true;markActive();closeSheet();save();rerender()},
+  missSkip:(el,d)=>{const w=S.mods[d.mod][d.l][+d.j].work[+d.w];w.skip=true;closeSheet();save();rerender()},
+  planDay:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];x.work=x.work||[];if(!x.work.some(w=>w.k===d.k))x.work.push({k:d.k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast('Planned · '+fmtDay(parseKey(d.k)))},
+  todoDone:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];if(isGauge(d.mod,d.l)){const was=+x.p||0;x.p=was>=100?(x._pp||0):100;if(x.p===100)x._pp=was}else x.d=!x.d;if(itemDone(d.mod,d.l,x))markActive();save();checkStickers();rerender()},
+  todoDel:(el,d)=>{const arr=S.mods[d.mod][d.l],j=+d.j,x=arr[j];if(!x)return;
+    if(d.l==='todo'){arr.splice(j,1);trash('mod',x.t||'To-do',{mod:d.mod,list:'todo',item:x,idx:j})}
+    else{x.noTodo=true;trash('todolink',x.t+' (removed from To-do)',{mod:d.mod,list:d.l,id:x.id})}rerender()},
+  workAdd:(el,d)=>sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Work</em> day</div></div><p class="hint" style="font-size:1rem;margin:4px 0 8px">${esc(S.mods[d.mod][d.l][+d.j].t)} — it will show in My week that day.</p>
+    <div class="field"><label>Day</label><input id="wk-d" type="date" value="${TK()}"></div>
+    <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="workSave" data-mod="${d.mod}" data-l="${d.l}" data-j="${d.j}">Add day</button></div></div>`),
+  workSave:(el,d)=>{const k=$('#wk-d').value;if(!k)return toast('Choose a day');const x=S.mods[d.mod][d.l][+d.j];x.work=x.work||[];if(!x.work.some(w=>w.k===k))x.work.push({k,d:false});x.work.sort((a,b)=>a.k<b.k?-1:1);closeSheet();save();rerender();toast('In My week on '+fmtDay(parseKey(k)))},
+  workDel:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[]).splice(+d.w,1)[0];save();rerender();if(w)toast('Day removed',()=>{x.work.push(w);x.work.sort((a,b)=>a.k<b.k?-1:1);save();rerender()})},
+  workTog:(el,d)=>{const x=S.mods[d.mod][d.l][+d.j];const w=(x.work||[])[+d.w];if(!w)return;w.d=!w.d;if(w.d)markActive();save();checkStickers();rerender()},
   linkSheet:(el,d)=>sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Add</em> a link</div></div>
     <div class="field"><label>Name</label><input id="ln-l" placeholder="e.g. Online class"></div><div class="field" style="margin-top:8px"><label>Link</label><input id="ln-u" placeholder="https://…" inputmode="url" autocapitalize="none"></div>
     <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="linkAdd" data-mod="${d.mod}" data-w="${d.w}">Add link</button></div></div>`,sh=>setTimeout(()=>sh.querySelector('#ln-l')?.focus(),300)),
@@ -282,15 +306,19 @@ function bindSwipes(){$$('[data-swipe]').forEach(row=>{const fg=row.querySelecto
 function swipeDelete(row){const d=row.dataset;
   if(d.swipe==='groc'){const i=S.groc.items.findIndex(x=>x.id===d.id),x=S.groc.items.splice(i,1)[0];trash('groc',x.name,{item:x,idx:i})}
   else if(d.swipe==='receipt'){const i=S.groc.receipts.findIndex(r=>r.id===d.id),r=S.groc.receipts.splice(i,1)[0];trash('receipt','Receipt '+fmtDay(parseKey(r.date)),{r,idx:i})}
+  else if(d.swipe==='todo'){ACT.todoDel(row,d);return}
   else if(d.swipe==='mod'){const arr=S.mods[d.mod][d.l],j=+d.j,x=arr.splice(j,1)[0];trash('mod',x.t||'Item',{mod:d.mod,list:d.l,item:x,idx:j})}
   rerender()}
 
 /* ---------- drag a task to another day ---------- */
 let drag=null;
+document.addEventListener('pointerdown',e=>{const pg=e.target.closest('[data-pgrip]');if(pg&&!drag){e.preventDefault();const x=S.mods[pg.dataset.mod][pg.dataset.l][+pg.dataset.j];const gh=document.createElement('div');gh.className='ghost';gh.textContent=x.t;gh.style.display='none';document.body.appendChild(gh);drag={plan:{...pg.dataset},gh,over:null,x0:e.clientX,y0:e.clientY};return}});
 document.addEventListener('pointerdown',e=>{const g=e.target.closest('[data-grip]');if(!g)return;e.preventDefault();const t=dayData(g.dataset.k).tasks.find(x=>x.id===g.dataset.grip);if(!t)return;
   const gh=document.createElement('div');gh.className='ghost';gh.textContent=t.t||'Task';document.body.appendChild(gh);drag={id:t.id,k:g.dataset.k,gh,over:null};moveGhost(e)});
-document.addEventListener('pointermove',e=>{if(drag){e.preventDefault();moveGhost(e)}},{passive:false});
-document.addEventListener('pointerup',e=>{if(!drag)return;const{id,k,gh,over}=drag;gh.remove();$$('.day.drop').forEach(x=>x.classList.remove('drop'));drag=null;
+document.addEventListener('pointermove',e=>{if(drag){e.preventDefault();if(drag.plan&&Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)>8)drag.gh.style.display='';moveGhost(e)}},{passive:false});
+document.addEventListener('pointerup',e=>{if(drag&&drag.plan){const{plan,gh,over,x0,y0}=drag;gh.remove();$$('.day.drop').forEach(x=>x.classList.remove('drop'));drag=null;
+    if(over)ACT.planDay(null,{...plan,k:over});else if(Math.hypot(e.clientX-x0,e.clientY-y0)<8)planOnSheet(plan.mod,plan.l,+plan.j);return}
+  if(!drag)return;const{id,k,gh,over}=drag;gh.remove();$$('.day.drop').forEach(x=>x.classList.remove('drop'));drag=null;
   if(over&&over!==k){const src=dayData(k).tasks,i=src.findIndex(x=>x.id===id),t=src.splice(i,1)[0];dayData(over).tasks.push(t);save();rerender();toast(`Moved to ${fmtDay(parseKey(over))}`,()=>{const a=dayData(over).tasks;a.splice(a.findIndex(x=>x.id===id),1);dayData(k).tasks.splice(i,0,t);save();rerender()})}});
 function moveGhost(e){drag.gh.style.left=(e.clientX-40)+'px';drag.gh.style.top=(e.clientY-20)+'px';const under=document.elementFromPoint(e.clientX,e.clientY)?.closest('.day');$$('.day.drop').forEach(x=>x!==under&&x.classList.remove('drop'));if(under){under.classList.add('drop');drag.over=under.dataset.day}else drag.over=null;
   if(e.clientY<70)window.scrollBy(0,-14);else if(e.clientY>innerHeight-110)window.scrollBy(0,14)}
@@ -336,7 +364,7 @@ document.addEventListener('visibilitychange',()=>{if(!S.pin.pin)return;if(docume
 /* ---------- notifications ---------- */
 async function notify(title,body){if(!('Notification'in window)||Notification.permission!=='granted')return toast(title+' — '+body);try{const reg=navigator.serviceWorker?await Promise.race([navigator.serviceWorker.ready,new Promise(r=>setTimeout(()=>r(null),3000))]):null;if(reg&&reg.active)return await reg.showNotification(title,{body,icon:'icon-192.png',badge:'icon-192.png',tag:title});new Notification(title,{body,icon:'icon-192.png'})}catch(e){toast(title)}}
 function checkReminders(){if(!remindersOn()||serverPushActive())return;const R={...S.rem,...devTypes()},n=new Date(),hm=pad(n.getHours())+':'+pad(n.getMinutes()),k=TK(),sent=S.sent;const once=(id,t,b)=>{if(sent[id])return;sent[id]=1;notify(t,b);save()};
-  if(R.morning&&hm>=R.mtime){const its=datedItems(k).filter(x=>!x.d);once('m'+k,'Good morning ☀',its.length?`${its.length} thing${its.length>1?'s':''} today: ${its.slice(0,3).map(x=>x.t).join(' · ')}`:'Nothing planned today — enjoy ♡')}
+  if(R.morning&&hm>=R.mtime){const its=dayPlan(k).filter(x=>!x.d);once('m'+k,'Good morning ☀',its.length?`${its.length} thing${its.length>1?'s':''} today: ${its.slice(0,3).map(x=>x.t).join(' · ')}`:'Nothing planned today — enjoy ♡')}
   if(R.dayBefore&&hm>=R.dtime){const t=key(addDays(today(),1));const due=datedItems(t).filter(x=>x.mod&&!x.d);if(due.length)once('d'+t,'Due tomorrow',due.map(x=>x.t).join(' · '))}
   if(R.three&&hm>=R.dtime){const t=key(addDays(today(),3));const due=datedItems(t).filter(x=>x.mod&&!x.d);if(due.length)once('t'+t,'Due in 3 days',due.map(x=>x.t).join(' · '))}
   if(R.streak&&hm>=(R.stime||'21:00')&&!S.active[k]&&streak()>0)once('s'+k,`Keep your ${streak()}-day streak 🎀`,'Tick one thing in your planner today.');
@@ -347,13 +375,22 @@ function checkReminders(){if(!remindersOn()||serverPushActive())return;const R={
 /* ---------- PDF export (print) ---------- */
 function printWeek(){const B=BLOCKS[S.ui.week??nowBlock()];const W=wk(B.id);
   $('#print').innerHTML=`<div class="pp"><h1>${blockName(B)}</h1><div class="sub2">${fmtRange(B)} ${B.start.getFullYear()} · ${B.brk?'midterm break':isOnline(B)?'online classes':'face to face'}</div>
-  <div class="pgrid">${[0,1,2,3,4,5,6].map(i=>{const d=addDays(B.start,i),k=key(d);return `<div class="pday"><h4>${DAYS[i]} ${d.getDate()}</h4>${datedItems(k).map(x=>`<div>${x.d?'☑':'☐'} ${esc(x.t)}${x.time?' · '+x.time:''}</div>`).join('')}${S.days[k]?.note?`<div style="font-style:italic">${esc(S.days[k].note)}</div>`:''}<div>&nbsp;</div><div>&nbsp;</div></div>`}).join('')}
+  <div class="pgrid">${[0,1,2,3,4,5,6].map(i=>{const d=addDays(B.start,i),k=key(d);return `<div class="pday"><h4>${DAYS[i]} ${d.getDate()}</h4>${dayPlan(k).map(x=>`<div>${x.d?'☑':'☐'} ${esc(x.t)}${x.time?' · '+x.time:''}</div>`).join('')}${S.days[k]?.note?`<div style="font-style:italic">${esc(S.days[k].note)}</div>`:''}<div>&nbsp;</div><div>&nbsp;</div></div>`}).join('')}
   <div class="pday"><h4>Tasks of the week</h4>${W.goals.filter(g=>g.t).map(g=>`<div>${g.d?'☑':'☐'} ${esc(g.t)}</div>`).join('')}<h4 style="margin-top:8px">Notes</h4><div>${esc(W.notes)}</div></div></div></div>`;window.print()}
 function printMonth(){const t=today();const[y,m]=S.ui.cal||[t.getFullYear(),t.getMonth()];const first=new Date(y,m,1),last=new Date(y,m+1,0);let d=addDays(first,-dow(first)),cells='';
   while(d<=last){for(let i=0;i<7;i++){const k=key(d);cells+=`<div class="pc" style="${d.getMonth()!==m?'opacity:.35':''}"><b>${d.getDate()}</b>${datedItems(k).slice(0,5).map(x=>`<div>• ${esc(x.t)}</div>`).join('')}</div>`;d=addDays(d,1)}}
   $('#print').innerHTML=`<div class="pp"><h1>${MONTHS[m]} ${y}</h1><div class="sub2">${esc(S.prof.t1+' '+S.prof.t2+' '+S.prof.t3)} · ${esc(S.prof.label)}</div><div class="pmonth">${DAYS3.map(x=>`<div class="ph2">${x.toUpperCase()}</div>`).join('')}${cells}</div></div>`;window.print()}
 
 /* ---------- sync sheet ---------- */
+function planSheet(mod,l,j,n){const x=S.mods[mod][l][j];if(!x.date)return toast('Add a deadline first');const ks=suggestDays(x,n);if(!ks.length)return toast('No free day left before the deadline');
+  const avail=Math.max(1,Math.round((parseKey(x.date)-today())/864e5));
+  sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Plan</em> for me</div></div><p class="hint" style="font-size:1rem;margin:4px 0 8px">${esc(x.t)} · due ${fmtDay(parseKey(x.date))}</p>
+   ${ks.map(k=>{const ld=dayLoad(k);return `<div class="li"><button class="box on" data-act="pkTog" data-pk="${k}" aria-label="Keep this day"></button><span class="tx">${fmtDay(parseKey(k))}</span><span class="meta">${ld?ld+' thing'+(ld>1?'s':'')+' that day':'free'}</span></div>`}).join('')}
+   <div class="k" style="margin:10px 0 4px">How many days</div><div class="chips">${[1,2,3,4,5].filter(v=>v<=avail).map(v=>`<button class="chip ${v===ks.length?'on':''}" data-act="planN" data-mod="${mod}" data-l="${l}" data-j="${j}" data-n="${v}">${v}</button>`).join('')}</div>
+   <div class="btns" style="margin:12px 0 0"><button class="btn" data-act="closeSheet">Cancel</button><button class="btn d" data-act="planSave" data-mod="${mod}" data-l="${l}" data-j="${j}">Add ${ks.length} day${ks.length>1?'s':''}</button></div></div>`)}
+function planOnSheet(mod,l,j){const x=S.mods[mod][l][j];const B=BLOCKS[S.ui.week];const days=[0,1,2,3,4,5,6].map(i=>key(addDays(B.start,i))).filter(k=>k>=TK()&&(!x.date||k<=x.date));
+  sheet(`<div style="padding:0 16px 6px"><div class="ttl" style="padding:6px 0 0"><div class="t"><em>Plan</em> it on…</div></div><p class="hint" style="font-size:1rem;margin:4px 0 8px">${esc(x.t)}${x.date?' · due '+fmtDay(parseKey(x.date)):''}</p>
+   <div class="btns" style="flex-direction:column;margin:0">${days.map(k=>`<button class="btn" data-act="planDay" data-mod="${mod}" data-l="${l}" data-j="${j}" data-k="${k}">${fmtDay(parseKey(k))}</button>`).join('')||'<span class="hint">No day left this week before the deadline.</span>'}<button class="btn d" data-act="planMe" data-mod="${mod}" data-l="${l}" data-j="${j}">✦ Plan for me</button></div></div>`)}
 function showLogin(preUser,msg,mode){if(!API||SYNC.conf)return;const L=$('#login');
   if(mode==='recover'){L.innerHTML=`<form class="lg" onsubmit="return false"><img src="icon-192.png" alt=""><h2><em>Forgot</em> password</h2><p>Use the recovery code you saved to choose a new password</p>
     <div class="field"><label for="lg-u">Username</label><input id="lg-u" value="${esc(preUser||'')}" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"></div>

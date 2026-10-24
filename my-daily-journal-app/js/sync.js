@@ -185,13 +185,13 @@ async function fetchMissingFiles(){if(!API||!SYNC.conf)return;for(const id of al
 const PUSH={status:null,sub:null,hash:null,timer:null,devs:null};
 const notifFlag=v=>{try{if(v)localStorage.setItem('mdj-notif',v);return localStorage.getItem('mdj-notif')}catch(e){return null}};
 const remindersOn=()=>('Notification'in window)&&Notification.permission==='granted'&&notifFlag()!=='off';
-const REM_TYPES=[['morning','Morning to-do'],['dayBefore','Day before a deadline'],['three','Also 3 days before'],['streak','Streak reminder'],['groc','Groceries day'],['water','Water']];
+const REM_TYPES=[['plan','Plan your week (Sunday)'],['morning','Morning to-do'],['dayBefore','Day before a deadline'],['three','Also 3 days before'],['streak','Streak reminder'],['groc','Groceries day'],['water','Water']];
 const hm2h=t=>{const[h,m]=String(t||'0:0').split(':').map(Number);return h+(m||0)/60};
 function waterHours(){const R=S.rem,a=hm2h(R.wfrom||'09:00'),b=hm2h(R.wto||'21:00'),e=Math.max(.5,+R.wevery||2),out=[];for(let h=a;h<=b+1e-9&&out.length<24;h+=e)out.push(h);return out}
 const h2hm=h=>pad(Math.floor(h))+':'+pad(Math.round((h%1)*60));
 /* which reminders THIS device shows (each device has its own choice) */
-function devTypes(v){try{if(v)localStorage.setItem('mdj-remdev',JSON.stringify(v));const o=JSON.parse(localStorage.getItem('mdj-remdev')||'null');if(o)return o}catch(e){}
-  const R=S.rem||{};return{morning:R.morning!==false,dayBefore:R.dayBefore!==false,three:R.three!==false,streak:R.streak!==false,groc:R.groc!==false,water:!!R.water}}
+function devTypes(v){try{if(v)localStorage.setItem('mdj-remdev',JSON.stringify(v));const o=JSON.parse(localStorage.getItem('mdj-remdev')||'null');if(o){if(o.plan===undefined)o.plan=true;return o}}catch(e){}
+  const R=S.rem||{};return{plan:R.plan!==false,morning:R.morning!==false,dayBefore:R.dayBefore!==false,three:R.three!==false,streak:R.streak!==false,groc:R.groc!==false,water:!!R.water}}
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isStandalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 function pushSupport(){if(!('serviceWorker'in navigator)||!('Notification'in window))return isIOS&&!isStandalone()?'ios-browser':'none';if(!('PushManager'in window))return isIOS&&!isStandalone()?'ios-browser':'local';return'push'}
@@ -219,7 +219,8 @@ const REM_DAYS=30;
 /* every reminder of the next 30 days, for all types — each device keeps only the types it wants */
 function buildQueue(){const R=S.rem,q=[],now=Date.now(),t0=today();
   for(let i=0;i<REM_DAYS;i++){const d=addDays(t0,i),k=key(d);
-    {const its=datedItems(k).filter(x=>!x.d);q.push({type:'morning',at:at(d,R.mtime),title:'Good morning ☀',body:its.length?`${its.length} thing${its.length>1?'s':''} today: ${its.slice(0,4).map(x=>x.t).join(' · ')}`:'Nothing planned today — enjoy ♡',tag:'m'+k,url:'./#today'})}
+    if(d.getDay()===0){const nx=deadlinesBetween(k,key(addDays(d,14)));if(nx.length){const np=nx.filter(e=>notPlanned(e.m.id,e));q.push({type:'plan',at:at(d,R.ptime||'19:00'),title:'Plan your week ✦',body:`${nx.length} deadline${nx.length>1?'s':''} in the next 2 weeks`+(np.length?` · ${np.length} not planned yet: `+np.slice(0,3).map(e=>`${e.x.t} (${parseKey(e.x.date).getDate()} ${MON3[parseKey(e.x.date).getMonth()]})`).join(', '):' · all planned ✓'),tag:'p'+k,url:'./#week'})}}
+    {const its=dayPlan(k).filter(x=>!x.d);q.push({type:'morning',at:at(d,R.mtime),title:'Good morning ☀',body:its.length?`${its.length} thing${its.length>1?'s':''} today: ${its.slice(0,4).map(x=>x.t).join(' · ')}`:'Nothing planned today — enjoy ♡',tag:'m'+k,url:'./#today'})}
     {const due=datedItems(key(addDays(d,1))).filter(x=>x.mod&&!x.d);if(due.length)q.push({type:'dayBefore',at:at(d,R.dtime),title:'Due tomorrow',body:due.map(x=>x.t).join(' · '),tag:'d'+k,url:'./#cal'})}
     {const due=datedItems(key(addDays(d,3))).filter(x=>x.mod&&!x.d);if(due.length)q.push({type:'three',at:at(d,R.dtime)+60e3,title:'Due in 3 days',body:due.map(x=>x.t).join(' · '),tag:'t'+k,url:'./#cal'})}
     if(!S.active[k])q.push({type:'streak',at:at(d,R.stime||'21:00'),title:'Keep your streak 🎀',body:'Tick one thing in your planner today ♡',tag:'s'+k,url:'./#week'});

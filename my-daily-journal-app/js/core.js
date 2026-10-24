@@ -1,6 +1,6 @@
 /* ============ MY DAILY JOURNAL — core (state, storage, helpers) ============ */
 'use strict';
-const APP_VERSION='6.5';
+const APP_VERSION='6.7';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
@@ -72,7 +72,7 @@ const blank=()=>({v:2,days:{},weeks:{},rec:[],recDone:{},recSkip:{},
   active:{},best:0,stickers:{},trash:[],sent:{},
   lock:{faceId:null},pin:{pin:null,salt:null,after:1},
   cfg:{lists:{todo:'To-do',assign:'Assignments',tuto:'Tutorials',lect:'Lectures',chapters:'Chapters'},status:{assign:['to do','in progress','submitted'],lect:['not started','to review','notes done'],tuto_diss:['draft','sent','corrected','final']},grades:{A:70,B:60,C:50,D:40},foodCats:{starch:'Starches',prot:'Protein',veg:'Vegetables',fruit:'Fruit',dairy:'Dairy',fat:'Fats & sugar',other:'Other'}},
-  rem:{morning:true,mtime:'07:30',dayBefore:true,dtime:'19:00',stime:'21:00',gday:6,gtime:'09:00',wfrom:'09:00',wto:'21:00',wevery:2,three:true,streak:true,groc:true,water:false},
+  rem:{plan:true,ptime:'19:00',morning:true,mtime:'07:30',dayBefore:true,dtime:'19:00',stime:'21:00',gday:6,gtime:'09:00',wfrom:'09:00',wto:'21:00',wevery:2,three:true,streak:true,groc:true,water:false},
   set:{theme:'rose',dark:'auto',swapWeeks:false,testsW:30,intro:true},
   prof:{name:'Mihaingo',hello:'Hello',tagline:'más amor, por favor',label:'Year 3 · Semester 2',big1:'26',big2:'27',spine:'my daily journal',t1:'MY',t2:'Daily',t3:'JOURNAL',footer:'thank you & see you next week ♡',menuTitle:'Menu'},
   sem:{start:'2026-10-19',weeks:15,breakAfter:9,breakLen:3},modCfg:{},waterGoal:8,
@@ -122,7 +122,7 @@ async function recoverIfEmpty(){ // if localStorage was wiped but IndexedDB stil
   if(localStorage.getItem(KEY))return false;const st=await idbGet('state','current');if(st&&st.v){S=st;load2();return true}return false}
 function load2(){const b=blank();for(const k in b)if(S[k]===undefined)S[k]=b[k];for(const g of['set','rem','prof','sem','cfg','pin'])for(const k in b[g])if(S[g][k]===undefined)S[g][k]=b[g][k];afterLoad()}
 function linkArr(mod,w){const M=S.mods[mod];if(!w||w==='gen')return M.links;M.sec=M.sec||{};return M.sec[w]=M.sec[w]||[]}
-function afterLoad(){try{for(const m in S.mods||{})for(const l of['assign','lect','tuto'])for(const x of (S.mods[m][l]||[]))if(isGauge(m,l)&&x.p==null&&x.st!=null){x.p=itemP(m,l,x)}}catch(e){}if(!noHist){UNDO=[];REDO=[]}if(S.lock&&S.lock.pin&&!(S.pin&&S.pin.pin)){S.pin={pin:S.lock.pin,salt:S.lock.salt,after:S.lock.after||1}}if(S.lock){delete S.lock.pin;delete S.lock.salt;delete S.lock.after}buildBlocks();applyModCfg();lastBody=contentOf()}
+function afterLoad(){try{for(const m in S.mods||{})for(const x of (S.mods[m].todo||[]))if(x.date){x.work=x.work||[];if(!x.work.some(w=>w.k===x.date))x.work.push({k:x.date,d:!!x.d});delete x.date}}catch(e){}try{for(const m in S.mods||{})for(const l of['assign','lect','tuto'])for(const x of (S.mods[m][l]||[]))if(isGauge(m,l)&&x.p==null&&x.st!=null){x.p=itemP(m,l,x)}}catch(e){}if(!noHist){UNDO=[];REDO=[]}if(S.lock&&S.lock.pin&&!(S.pin&&S.pin.pin)){S.pin={pin:S.lock.pin,salt:S.lock.salt,after:S.lock.after||1}}if(S.lock){delete S.lock.pin;delete S.lock.salt;delete S.lock.after}buildBlocks();applyModCfg();lastBody=contentOf()}
 
 /* ---------- activity / streak ---------- */
 function markActive(){const k=TK();if(!S.active[k]){S.active[k]=1;const s=streak();if(s>S.best)S.best=s}}
@@ -140,6 +140,7 @@ function restore(id){const i=S.trash.findIndex(t=>t.id===id);if(i<0)return;const
     case'receipt':ins(S.groc.receipts,d.idx,d.r);break;
     case'dump':ins(S.dump,d.idx,d.n);break;
     case'mod':ins(S.mods[d.mod][d.list],d.idx,d.item);break;
+    case'todolink':{const x=(S.mods[d.mod][d.list]||[]).find(y=>y.id===d.id);if(x)delete x.noTodo;break}
     case'link':ins(linkArr(d.mod,d.w),d.idx,d.link);break;
     case'test':ins(S.mods[d.mod].tests,d.idx,d.test);break;
     case'food':ins(S.foods,d.idx,d.food);break;
@@ -176,15 +177,38 @@ const STATUS={assign:['to do','in progress','submitted'],lect:['not started','to
 const isGauge=(mod,l)=>l==='assign'||l==='lect'||(l==='tuto'&&mod==='diss');
 function itemP(mod,l,x){if(isGauge(mod,l)){if(x.p!=null)return +x.p||0;if(x.st!=null){const n=(STATUS[l==='tuto'?'tuto_diss':l]||[0,0,0]).length;return Math.round(Math.min(x.st,n-1)/(n-1)*100)}return 0}return x.d?100:0}
 const itemDone=(mod,l,x)=>itemP(mod,l,x)>=100;
-function listStats(mod,l){const a=S.mods[mod][l];const n=a.length;let d=0,sum=0;for(const x of a){const p=itemP(mod,l,x);sum+=p;if(p>=100)d++}return{n,d,p:n?sum/n/100:0}}
-function modProgress(mod){const ls=['todo','assign','tuto','lect'].map(l=>listStats(mod,l)).filter(s=>s.n);return ls.length?ls.reduce((a,s)=>a+s.p,0)/ls.length:0}
+/* To-do of a notebook = its own to-dos + every assignment / tutorial / lecture (unless removed from To-do).
+   Each entry can have work days (x.work=[{k,d}]) that show in My week; deadlines (x.date) of assignments/tutorials/lectures go to the Calendar. */
+function todoEntries(mod){const M=S.mods[mod],out=[];(M.todo||[]).forEach((x,j)=>out.push({x,l:'todo',j,own:true}));
+  for(const l of['assign','tuto','lect'])(M[l]||[]).forEach((x,j)=>{if(!x.noTodo)out.push({x,l,j,own:false})});return out}
+const entryDone=(mod,e)=>e.own?!!e.x.d:itemDone(mod,e.l,e.x);
+/* days until a deadline (negative = late) */
+const daysTo=k=>Math.round((parseKey(k)-today())/864e5);
+function dueLabel(k){const n=daysTo(k);return n===0?'due today':n===1?'tomorrow':n>1?`in ${n} days`:n===-1?'1 day late':`${-n} days late`}
+const notPlanned=(mod,e)=>!e.own&&!!e.x.date&&!entryDone(mod,e)&&!(e.x.work||[]).length;
+/* To-do order: ★ first, then nearest deadline, finished at the bottom */
+function todoSorted(mod){const key=e=>e.x.date||((e.x.work||[])[0]||{}).k||'9999';return todoEntries(mod).sort((a,b)=>(entryDone(mod,a)-entryDone(mod,b))||((b.x.star?1:0)-(a.x.star?1:0))||(key(a)<key(b)?-1:key(a)>key(b)?1:0))}
+/* work days left undone before today (last 7 days) */
+function missedWork(){const out=[],t=TK(),from=key(addDays(today(),-7));for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const e of todoEntries(m.id)){if(entryDone(m.id,e))continue;(e.x.work||[]).forEach((w,wi)=>{if(!w.d&&!w.skip&&w.k<t&&w.k>=from)out.push({m,...e,w,wi})})}}return out}
+/* to hand in between two dates, not finished, no work day yet */
+function toPlan(k1,k2){const out=[];for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const e of todoEntries(m.id))if(e.x.date&&e.x.date>=k1&&e.x.date<=k2&&notPlanned(m.id,e))out.push({m,...e})}return out.sort((a,b)=>a.x.date<b.x.date?-1:1)}
+function deadlinesBetween(k1,k2){const out=[];for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const e of todoEntries(m.id))if(e.x.date&&e.x.date>=k1&&e.x.date<=k2&&!entryDone(m.id,e))out.push({m,...e})}return out.sort((a,b)=>a.x.date<b.x.date?-1:1)}
+/* "Plan for me": spread n work days before the deadline, on the least busy days */
+function dayLoad(k){return dayItems(k).length+workOn(k).length}
+function suggestDays(x,n){const t=today(),last=addDays(parseKey(x.date),-1),have=new Set((x.work||[]).map(w=>w.k));const days=[];for(let d=t;d<=last;d=addDays(d,1)){const k=key(d);if(!have.has(k))days.push(k)}
+  if(!days.length)return[];n=Math.max(1,Math.min(n,days.length));const out=[];for(let i=0;i<n;i++){const a=Math.floor(i*days.length/n),b=Math.floor((i+1)*days.length/n);const seg=days.slice(a,Math.max(b,a+1));seg.sort((p,q)=>dayLoad(p)-dayLoad(q)||(p<q?-1:1));out.push(seg[0])}return[...new Set(out)].sort()}
+function workOn(k){const out=[];for(const m of MODS){if(m.id==='dump'||!S.mods[m.id])continue;for(const e of todoEntries(m.id))(e.x.work||[]).forEach((w,wi)=>{if(w.k===k)out.push({m,...e,w,wi})})}return out.sort((a,b)=>(b.x.star?1:0)-(a.x.star?1:0))}
+function listStats(mod,l){if(l==='todo'){const es=todoEntries(mod);const d=es.filter(e=>entryDone(mod,e)).length;return{n:es.length,d,p:es.length?d/es.length:0}}const a=S.mods[mod][l];const n=a.length;let d=0,sum=0;for(const x of a){const p=itemP(mod,l,x);sum+=p;if(p>=100)d++}return{n,d,p:n?sum/n/100:0}}
+function modProgress(mod){const own=S.mods[mod].todo||[];const ls=[{n:own.length,p:own.length?own.filter(x=>x.d).length/own.length:0},...['assign','tuto','lect'].map(l=>listStats(mod,l))].filter(s=>s.n);return ls.length?ls.reduce((a,s)=>a+s.p,0)/ls.length:0}
 function gradeNeeds(mod){const M=S.mods[mod];let got=0,tw=0;for(const t of M.tests){tw+=num(t.weight);const out=num(t.out)>0?num(t.out):100;got+=Math.min(num(t.score),out)/out*num(t.weight)}
   const ew=num(M.examW);const need=T=>ew?(T-got)/(ew/100):Infinity;
   return{got,tw,ew,ok:Math.abs(tw+ew-100)<.01,grades:(()=>{const m=gradeMins();return[['A',m.A+'–100',m.A],['B',m.B+'–'+(m.A-1),m.B],['C',m.C+'–'+(m.B-1),m.C],['D',m.D+'–'+(m.C-1),m.D],['F','< '+m.D,0]]})().map(([g,r,T])=>({g,r,T,need:g==='F'?null:Math.max(0,Math.ceil(need(T)-1e-9))}))}}
 
 /* ---------- all dated items (for calendar / today / reminders) ---------- */
+/* what is planned on a day: tasks, deadlines and binder work days (Home, Today, My week PDF, morning reminder) */
+function dayPlan(k){return[...datedItems(k),...workOn(k).map(e=>({k,t:`${e.m.short} · ${e.x.t}`,d:!!e.w.d,col:e.m.col,src:e.m.short,work:true}))]}
 function datedItems(k){
   const out=[];for(const t of dayItems(k))out.push({k,t:t.t,d:t.d,time:t.time,end:t.end,col:'var(--c-task)',src:'Task',rec:t.rec});
-  for(const m of MODS)for(const l of['todo','assign','tuto','lect'])for(const x of S.mods[m.id][l])if(x.date===k)out.push({k,t:`${m.short} · ${x.t}`,d:itemDone(m.id,l,x),p:itemP(m.id,l,x),col:m.col,src:m.short,mod:m.id,list:l});
+  for(const m of MODS)for(const l of['assign','tuto','lect'])for(const x of S.mods[m.id][l])if(x.date===k)out.push({k,t:`${m.short} · ${x.t} due`,d:itemDone(m.id,l,x),p:itemP(m.id,l,x),col:m.col,src:m.short,mod:m.id,list:l});
   for(const r of S.groc.receipts)if(r.date===k)out.push({k,t:`Groceries · ${rs(r.real)}`,d:true,col:'var(--c-groc)',src:'Groceries'});
   return out}
